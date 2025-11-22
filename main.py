@@ -50,7 +50,7 @@ def main():
     parser.add_argument('--grid', type=int, default=20, help='Размер поля')
     parser.add_argument('--mutation-rate', type=float, default=0.1, help='Вероятность мутации')
     parser.add_argument('--mutation-strength', type=float, default=0.2, help='Сила мутации')
-    parser.add_argument('--max-steps', type=int, default=400, help='Макс. шагов в игре')
+    parser.add_argument('--max-steps', type=int, default=100000, help='Макс. шагов в игре (для победы нужно ~400-5000)')
     parser.add_argument('--visualize', action='store_true', help='Включить визуализацию')
     parser.add_argument('--auto', action='store_true', help='Автоматический режим')
     parser.add_argument('--db', default='evolution.db', help='Путь к базе данных')
@@ -60,9 +60,14 @@ def main():
     
     args = parser.parse_args()
     
-    # Инициализация базы данных
+    # Инициализация базы данных (создается автоматически если не существует)
     if not args.no_db:
         try:
+            # Создаем БД если её нет
+            import os
+            if not os.path.exists(args.db):
+                print(f"💾 Создание базы данных: {args.db}")
+            
             db = EvolutionDB(args.db)
             session_id = db.create_session(
                 population_size=args.pop,
@@ -127,9 +132,13 @@ def main():
     print("=" * 60)
     print()
     
-    # Основной цикл эволюции
-    for gen in range(args.gens):
+    # Основной цикл эволюции (бесконечный до победы)
+    victory_achieved = False
+    gen = 0
+    
+    while not victory_achieved:
         best_fit, avg_fit = evolution.evolve()
+        gen += 1
         
         # Сохранение в БД
         if db and session_id:
@@ -148,16 +157,38 @@ def main():
               f"Лучший: {best_fit:6.1f} | "
               f"Средний: {avg_fit:6.1f}")
         
+        # Проверка победы: если лучшая змейка заполнила поле
+        if best_fit >= 10000.0:
+            victory_achieved = True
+            print("\n" + "=" * 60)
+            print("🎉 ПОБЕДА! ЗМЕЙКА ЗАПОЛНИЛА ВСЁ ПОЛЕ! 🎉")
+            print("=" * 60)
+            print(f"Поколение победы: {evolution.generation}")
+            print(f"Fitness победителя: {best_fit:.1f}")
+        
         # Визуализация (если нужна)
         if args.visualize:
             result = visualizer.visualize_generation(auto_mode=args.auto)
-            if not result:
+            if result == "VICTORY":
+                victory_achieved = True
+                print("\n" + "=" * 60)
+                print("🎉 ПОБЕДА! ЗМЕЙКА ЗАПОЛНИЛА ВСЁ ПОЛЕ! 🎉")
+                print("=" * 60)
+                print(f"Поколение победы: {evolution.generation}")
+                print(f"Fitness победителя: {best_fit:.1f}")
+            elif not result:
                 print("\nВизуализация остановлена пользователем.")
                 break
         
         # Сохранение лучшей змейки периодически
-        if (gen + 1) % 50 == 0:
-            print(f"✓ Поколение {gen + 1} завершено")
+        if gen % 50 == 0:
+            print(f"✓ Поколение {gen} завершено (эволюция продолжается...)")
+        
+        # Ограничение по поколениям (если указано, но только как предупреждение)
+        if args.gens > 0 and gen >= args.gens and not victory_achieved:
+            print(f"\n⚠️  Достигнут лимит поколений ({args.gens}), но победа ещё не достигнута.")
+            print("Эволюция продолжается до победы...")
+            print("(Нажмите Ctrl+C для остановки)")
     
     # Финальная статистика
     print("\n" + "=" * 60)

@@ -3,6 +3,7 @@
 """
 
 import numpy as np
+import time
 from typing import List, Tuple, Optional
 from brain import Brain
 
@@ -38,7 +39,8 @@ class Snake:
         self.direction = 3  # Движение вправо
         self.fitness = 0
         self.steps = 0
-        self.steps_without_food = 0
+        self.steps_without_food = 0  # Оставляем для совместимости
+        self.last_food_time = time.time()  # Время последнего поедания еды (в секундах)
         self.alive = True
         
     def get_head(self) -> Tuple[int, int]:
@@ -118,10 +120,7 @@ class Snake:
         if not self.alive:
             return False
         
-        # Проверка на смерть от голода (>8 секунд без еды = 80 шагов при 10 fps)
-        if self.steps_without_food > 80:
-            self.alive = False
-            return False
+        # ПРИМЕЧАНИЕ: Проверка голода теперь в environment.py, чтобы голод рос даже при остановке
         
         self.direction = action
         dir_x, dir_y = self.DIRECTIONS[action]
@@ -140,16 +139,14 @@ class Snake:
             new_head in walls):  # Проверка на стены
             # Столкновение - змейка мертва
             self.alive = False
-            # ВАЖНО: увеличиваем время БЕЗ еды даже при смерти от стены
-            # чтобы голод продолжал расти, показывая реальную ситуацию
-            self.steps_without_food += 1
+            # ПРИМЕЧАНИЕ: steps_without_food теперь увеличивается в environment.py на каждом шаге
             return False
         
         # Добавление новой головы
         self.body.insert(0, new_head)
         
         self.steps += 1
-        self.steps_without_food += 1
+        # ПРИМЕЧАНИЕ: steps_without_food теперь увеличивается в environment.py на каждом шаге
         
         return True
     
@@ -157,10 +154,27 @@ class Snake:
         """Змейка съедает еду."""
         # Увеличенная награда за еду + бонус за скорость
         base_reward = 150
-        speed_bonus = max(0, 50 - self.steps_without_food)  # Бонус за быструю еду
+        # Бонус за быструю еду (по времени, не по шагам)
+        time_without_food = self.get_time_without_food()
+        speed_bonus = max(0, 50 - int(time_without_food * 10))  # Бонус уменьшается со временем
         self.fitness += base_reward + speed_bonus
         self.steps_without_food = 0
+        self.last_food_time = time.time()  # Обновляем время последнего поедания
         # Хвост не удаляется - змейка растёт
+    
+    def get_time_without_food(self) -> float:
+        """Получить время без еды в секундах."""
+        return time.time() - self.last_food_time
+    
+    def get_hunger_percent(self, max_hunger_seconds: float = 8.0) -> float:
+        """
+        Получить процент голода (0.0 = сыт, 1.0 = голоден до смерти).
+        
+        Args:
+            max_hunger_seconds: максимальное время без еды в секундах до смерти
+        """
+        time_without = self.get_time_without_food()
+        return min(1.0, time_without / max_hunger_seconds)
     
     def remove_tail(self):
         """Удаление хвоста (когда не съела еду)."""
@@ -172,19 +186,21 @@ class Snake:
         if self.alive:
             # Уменьшена награда за выживание (было 0.5, стало 0.2)
             self.fitness += 0.2
-            # Штраф за бездействие (если не ест >50 шагов)
-            if self.steps_without_food > 50:
-                self.fitness -= 1.0  # Увеличено ×2
+            # Штраф за бездействие (если не ест >5 секунд)
+            time_without = self.get_time_without_food()
+            if time_without > 5.0:
+                self.fitness -= 1.0 * (time_without - 5.0)  # Штраф растёт со временем
     
     def get_fitness(self) -> float:
         """Получить финальный fitness."""
-        # Строгий штраф за чрезмерное блуждание без еды
-        if self.steps_without_food > 70:
+        # Строгий штраф за чрезмерное блуждание без еды (по времени)
+        time_without = self.get_time_without_food()
+        if time_without > 7.0:
             # Критический штраф за полное застревание (максимальный штраф)
             self.fitness *= 0.5
-        elif self.steps_without_food > 60:
+        elif time_without > 6.0:
             # Прогрессивный штраф: чем дольше, тем больше
-            penalty = (self.steps_without_food - 60) * 0.6
+            penalty = (time_without - 6.0) * 10.0
             self.fitness -= penalty
         return max(0, self.fitness)  # Не может быть отрицательным
     

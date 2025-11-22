@@ -12,35 +12,65 @@ import copy
 class Visualizer:
     """Визуализатор для pygame."""
     
-    # Цвета в стиле "цифровой жизни"
+    # СТРИМ-ДИЗАЙН: Яркая неоновая палитра для максимальной видимости
     COLORS = {
-        'background': (11, 12, 16),
-        'background_gradient': (15, 17, 22),
-        'grid': (31, 40, 51),
-        'grid_highlight': (40, 50, 65),
-        'snake_gen1': (51, 255, 87),      # Gen <100
-        'snake_gen2': (0, 255, 255),      # Gen 100-500
-        'snake_gen3': (108, 99, 255),     # Gen 500+
-        'snake_head_glow': (150, 255, 200),
-        'snake_outline': (20, 80, 20),
-        'snake_trail': (51, 255, 87),
-        'food': (255, 46, 99),
-        'food_glow': (255, 180, 200),
-        'food_flash': (255, 255, 255),
-        'text': (0, 255, 255),
-        'text_accent': (255, 215, 0),
-        'text_scan': (0, 255, 100),
-        'ui_bg': (20, 25, 35),
-        'ui_border': (50, 60, 80),
-        'neural_trace': (100, 255, 255),
-        'generation_flash': (255, 255, 255),
-        'wall': (80, 80, 100),
-        'wall_glow': (120, 120, 150),
-        'moving_wall': (120, 60, 100),
-        'poison': (150, 50, 150),
-        'poison_glow': (255, 0, 255),
-        'bonus': (255, 215, 0),
-        'bonus_glow': (255, 255, 200)
+        # Фон - глубокий черный с легким синим оттенком
+        'background': (5, 5, 10),
+        'background_gradient': (10, 8, 15),
+        'background_pattern': (15, 12, 20),
+        
+        # Сетка - яркая неоновая с эффектом свечения
+        'grid': (0, 255, 255),              # Яркий циан (неон)
+        'grid_dim': (0, 100, 120),          # Приглушенный для обычных линий
+        'grid_highlight': (255, 0, 255),    # Яркий пурпурный для акцентов
+        'grid_glow': (0, 200, 255),         # Свечение сетки
+        
+        # Змейка - эволюция цветов по поколениям (яркие неоновые)
+        'snake_gen1': (0, 255, 100),        # Яркий неоновый зеленый
+        'snake_gen2': (100, 255, 255),     # Яркий циан
+        'snake_gen3': (255, 100, 255),     # Яркий пурпурный
+        'snake_gen4': (255, 255, 100),     # Яркий желтый (для элиты)
+        'snake_head_glow': (255, 255, 255), # Белое свечение головы
+        'snake_body_glow': (0, 255, 200),   # Свечение тела
+        'snake_trail': (0, 200, 150),       # След змейки
+        
+        # Еда - яркий неоновый розовый/красный
+        'food': (255, 50, 100),             # Яркий неоновый розовый
+        'food_glow': (255, 150, 200),       # Свечение еды
+        'food_core': (255, 255, 255),       # Белое ядро
+        'food_flash': (255, 255, 0),        # Желтая вспышка
+        'food_particles': (255, 100, 150),  # Частицы еды
+        
+        # UI - стеклянный эффект с неоновыми акцентами
+        'ui_bg': (10, 10, 20),              # Темный фон
+        'ui_bg_solid': (15, 15, 25),        # Непрозрачный вариант
+        'ui_bg_glow': (25, 25, 40),         # Свечение фона
+        'ui_border': (0, 255, 255),         # Неоновая граница
+        'ui_border_glow': (0, 200, 255),    # Свечение границы
+        'ui_glass': (20, 20, 35),           # Стеклянный эффект
+        
+        # Текст - яркий и контрастный
+        'text': (255, 255, 255),            # Белый текст
+        'text_accent': (255, 200, 0),       # Золотой акцент
+        'text_highlight': (0, 255, 255),   # Циан для выделения
+        'text_dim': (150, 150, 150),        # Приглушенный текст
+        'text_scan': (0, 255, 150),         # Зеленое сканирование
+        
+        # График и прогресс-бары
+        'chart_line': (0, 255, 255),        # Яркая линия графика
+        'chart_glow': (0, 200, 255),        # Свечение графика
+        'chart_bg': (5, 10, 15),            # Фон графика
+        'progress_bar': (0, 255, 150),      # Зеленый прогресс
+        'progress_bar_warning': (255, 200, 0), # Желтый предупреждение
+        'progress_bar_danger': (255, 50, 50),  # Красный опасность
+        'progress_bar_bg': (20, 20, 30),    # Фон прогресс-бара
+        
+        # Эффекты
+        'victory': (255, 255, 0),           # Золотой для победы
+        'victory_glow': (255, 200, 0),      # Свечение победы
+        'death': (255, 0, 0),               # Красный для смерти
+        'generation_flash': (255, 255, 255), # Белая вспышка поколения
+        'particle': (255, 255, 255),        # Белые частицы
     }
     
     def __init__(self, evolution: Evolution, cell_size: int = 20):
@@ -52,8 +82,8 @@ class Visualizer:
         self.evolution = evolution
         self.cell_size = cell_size
         self.grid_size = evolution.grid_size
-        self.width = self.grid_size * cell_size + 350  # +350 для статистики
-        self.height = self.grid_size * cell_size + 100
+        self.width = self.grid_size * cell_size + 400  # +400 для улучшенной статистики
+        self.height = self.grid_size * cell_size + 120  # +120 для статус-бара
         
         pygame.init()
         pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
@@ -77,7 +107,8 @@ class Visualizer:
         self.demo_food_positions = []  # Список позиций еды для демо
         self.demo_step = 0
         self.demo_max_steps = 10000  # Увеличен лимит для длинных игр
-        self.demo_last_food_step = 0  # Шаг когда последний раз ела
+        self.demo_last_food_step = 0  # Шаг когда последний раз ела (для совместимости)
+        self.death_timer = 0  # Таймер для задержки после смерти
         
         # Таймер для авторежима
         self.auto_timer = 0
@@ -87,10 +118,14 @@ class Visualizer:
         self.food_flash_alpha = 0
         self.food_flash_radius = 0
         self.trails = []  # Следы змеек
+        self.particles = []  # Частицы для эффектов
         
         # Эффект поколения
         self.generation_flash = 0
         self.generation_text = None
+        
+        # Анимационные параметры
+        self.time_offset = 0
         
         # Звуковые эффекты
         self.sound_enabled = True
@@ -145,135 +180,180 @@ class Visualizer:
             self.last_sound_gen = self.evolution.generation
     
     def draw_grid(self):
-        """Отрисовка сетки в стиле цифровой лаборатории."""
+        """СТРИМ-ДИЗАЙН: Яркая неоновая сетка с эффектом свечения."""
         grid_width = self.grid_size * self.cell_size
         grid_height = self.grid_size * self.cell_size
         
-        # Фон поля
+        # Глубокий черный фон
         grid_rect = pygame.Rect(0, 0, grid_width, grid_height)
         pygame.draw.rect(self.screen, self.COLORS['background'], grid_rect)
         
-        # Тонкие нейросетевые прожилки (случайные линии) - редко
-        import random
+        # Анимированный паттерн фона (движущиеся точки)
         current_time = pygame.time.get_ticks()
-        if current_time % 10000 < 100:  # Только в первые 100мс каждой секунды
-            random.seed(current_time // 10000)
-            for _ in range(3):
-                x1 = random.randint(0, grid_width)
-                y1 = random.randint(0, grid_height)
-                x2 = x1 + random.randint(-50, 50)
-                y2 = y1 + random.randint(-50, 50)
-                if 0 <= x2 <= grid_width and 0 <= y2 <= grid_height:
-                    alpha = int(10 * random.random())
-                    color = tuple(min(255, c + alpha) for c in self.COLORS['background'])
-                    pygame.draw.line(self.screen, color, (x1, y1), (x2, y2), 1)
+        import math
+        for i in range(20):
+            x = int((current_time / 50 + i * 37) % grid_width)
+            y = int((current_time / 70 + i * 23) % grid_height)
+            alpha = abs(math.sin(current_time / 1000.0 + i)) * 0.1
+            dot_color = tuple(int(c * alpha) for c in (0, 100, 150))
+            pygame.draw.circle(self.screen, dot_color, (x, y), 1)
         
-        # Едва заметная сетка
+        # Яркие неоновые линии сетки
+        pulse = abs(np.sin(current_time / 1500.0)) * 0.3 + 0.7
+        
+        # Основные линии - яркий циан с пульсацией
         for x in range(0, self.grid_size + 1):
+            alpha = 0.3 * pulse
+            grid_color = tuple(int(c * alpha) for c in self.COLORS['grid'])
             start_pos = (x * self.cell_size, 0)
             end_pos = (x * self.cell_size, grid_height)
-            pygame.draw.line(self.screen, self.COLORS['grid'], start_pos, end_pos, 1)
+            pygame.draw.line(self.screen, grid_color, start_pos, end_pos, 1)
         
         for y in range(0, self.grid_size + 1):
+            alpha = 0.3 * pulse
+            grid_color = tuple(int(c * alpha) for c in self.COLORS['grid'])
             start_pos = (0, y * self.cell_size)
             end_pos = (grid_width, y * self.cell_size)
-            pygame.draw.line(self.screen, self.COLORS['grid'], start_pos, end_pos, 1)
+            pygame.draw.line(self.screen, grid_color, start_pos, end_pos, 1)
         
-        # Акцентные линии каждые 5 клеток
+        # Яркие акцентные линии каждые 5 клеток - пурпурный неон
+        glow_pulse = abs(np.sin(current_time / 1000.0)) * 0.5 + 0.5
         for x in range(0, self.grid_size + 1, 5):
             if x > 0 and x < self.grid_size:
+                # Основная линия
+                highlight_color = tuple(int(c * glow_pulse * 0.8) for c in self.COLORS['grid_highlight'])
                 start_pos = (x * self.cell_size, 0)
                 end_pos = (x * self.cell_size, grid_height)
-                pygame.draw.line(self.screen, self.COLORS['grid_highlight'], start_pos, end_pos, 1)
+                pygame.draw.line(self.screen, highlight_color, start_pos, end_pos, 2)
+                # Многослойное свечение
+                for glow_layer in range(3, 0, -1):
+                    glow_alpha = 0.3 / glow_layer * glow_pulse
+                    glow_color = tuple(int(c * glow_alpha) for c in self.COLORS['grid_highlight'])
+                    offset = glow_layer
+                    pygame.draw.line(self.screen, glow_color, 
+                                   (x * self.cell_size - offset, 0), 
+                                   (x * self.cell_size - offset, grid_height), 1)
+                    pygame.draw.line(self.screen, glow_color, 
+                                   (x * self.cell_size + offset, 0), 
+                                   (x * self.cell_size + offset, grid_height), 1)
         
         for y in range(0, self.grid_size + 1, 5):
             if y > 0 and y < self.grid_size:
+                highlight_color = tuple(int(c * glow_pulse * 0.8) for c in self.COLORS['grid_highlight'])
                 start_pos = (0, y * self.cell_size)
                 end_pos = (grid_width, y * self.cell_size)
-                pygame.draw.line(self.screen, self.COLORS['grid_highlight'], start_pos, end_pos, 1)
+                pygame.draw.line(self.screen, highlight_color, start_pos, end_pos, 2)
+                for glow_layer in range(3, 0, -1):
+                    glow_alpha = 0.3 / glow_layer * glow_pulse
+                    glow_color = tuple(int(c * glow_alpha) for c in self.COLORS['grid_highlight'])
+                    offset = glow_layer
+                    pygame.draw.line(self.screen, glow_color, 
+                                   (0, y * self.cell_size - offset), 
+                                   (grid_width, y * self.cell_size - offset), 1)
+                    pygame.draw.line(self.screen, glow_color, 
+                                   (0, y * self.cell_size + offset), 
+                                   (grid_width, y * self.cell_size + offset), 1)
     
     def draw_snake(self, snake):
-        """Отрисовка змейки в стиле цифрового организма."""
-        # Определяем цвет на основе поколения
+        """СТРИМ-ДИЗАЙН: Яркая неоновая змейка с мощным свечением."""
+        # Определяем цвет на основе поколения (яркие неоновые цвета)
         gen = self.evolution.generation if hasattr(self.evolution, 'generation') else 0
         if gen < 100:
-            snake_color = self.COLORS['snake_gen1']
-            glow_color = (100, 255, 150)
+            snake_color = self.COLORS['snake_gen1']  # Яркий неоновый зеленый
+            glow_color = (0, 255, 200)
         elif gen < 500:
-            snake_color = self.COLORS['snake_gen2']
-            glow_color = (100, 200, 255)
+            snake_color = self.COLORS['snake_gen2']  # Яркий циан
+            glow_color = (100, 255, 255)
+        elif gen < 1000:
+            snake_color = self.COLORS['snake_gen3']  # Яркий пурпурный
+            glow_color = (255, 100, 255)
         else:
-            snake_color = self.COLORS['snake_gen3']
-            glow_color = (200, 150, 255)
+            snake_color = self.COLORS['snake_gen4']  # Яркий желтый (элита)
+            glow_color = (255, 255, 150)
         
-        # Анимация пульсации энергии
-        pulse = abs(np.sin(pygame.time.get_ticks() / 200))
-        pulse_offset = int(pulse * 2)
+        # Мощная пульсация энергии
+        current_time = pygame.time.get_ticks()
+        pulse = abs(np.sin(current_time / 150.0))  # Быстрая пульсация
+        pulse_offset = int(pulse * 5)
         
         for i, (x, y) in enumerate(snake.body):
-            # Позиция в пикселях
             px = x * self.cell_size
             py = y * self.cell_size
-            margin = 2
+            margin = 1
             
-            if i == 0:  # Голова - фокус энергии
-                # Многослойное свечение головы
-                for glow_layer in range(3, 0, -1):
-                    glow_size = self.cell_size + pulse_offset + glow_layer * 2
+            # Градиент яркости по длине тела
+            body_progress = i / max(1, len(snake.body) - 1)
+            if i == 0:
+                body_progress = 1.0
+            
+            if i == 0:  # Голова - мощное свечение
+                # Многослойное пульсирующее свечение (8 слоев для эффекта)
+                for glow_layer in range(8, 0, -1):
+                    glow_size = self.cell_size + pulse_offset + glow_layer * 4
                     glow_rect = pygame.Rect(
-                        px + margin - (glow_size - self.cell_size) // 2,
-                        py + margin - (glow_size - self.cell_size) // 2,
-                        glow_size - margin * 2,
-                        glow_size - margin * 2
+                        px - (glow_size - self.cell_size) // 2,
+                        py - (glow_size - self.cell_size) // 2,
+                        glow_size, glow_size
                     )
-                    alpha = 1.0 / (glow_layer + 1) * 0.3
+                    alpha = 1.0 / (glow_layer + 1) * 0.6 * (0.8 + pulse * 0.2)
                     glow_col = tuple(int(c * alpha) for c in glow_color)
-                    pygame.draw.rect(self.screen, glow_col, glow_rect, width=1, border_radius=5)
+                    pygame.draw.rect(self.screen, glow_col, glow_rect, width=1, border_radius=8)
                 
-                # Голова
-                head_rect = pygame.Rect(
-                    px + margin, py + margin,
-                    self.cell_size - margin * 2, self.cell_size - margin * 2
-                )
-                pygame.draw.rect(self.screen, snake_color, head_rect, border_radius=5)
+                # Голова - яркий неон
+                head_rect = pygame.Rect(px + margin, py + margin,
+                                      self.cell_size - margin * 2, self.cell_size - margin * 2)
+                # Внешнее свечение
+                pygame.draw.rect(self.screen, tuple(int(c * 0.8) for c in snake_color), 
+                               head_rect, border_radius=8)
+                # Основной цвет (максимальная яркость)
+                pygame.draw.rect(self.screen, snake_color, head_rect, border_radius=8)
+                # Внутреннее ядро
+                inner_rect = pygame.Rect(px + margin + 3, py + margin + 3,
+                                        self.cell_size - margin * 2 - 6, self.cell_size - margin * 2 - 6)
+                pygame.draw.rect(self.screen, self.COLORS['snake_head_glow'], 
+                               inner_rect, border_radius=5)
                 
-                # Глаза-сенсоры (два ярких пикселя)
-                pygame.draw.circle(self.screen, (255, 255, 255), 
-                                  (px + 5, py + 5), 3)
-                pygame.draw.circle(self.screen, (255, 255, 255), 
-                                  (px + self.cell_size - 5, py + 5), 3)
-                pygame.draw.circle(self.screen, (0, 255, 200), 
-                                  (px + 5, py + 5), 2)
-                pygame.draw.circle(self.screen, (0, 255, 200), 
-                                  (px + self.cell_size - 5, py + 5), 2)
+                # Яркие глаза-сенсоры
+                eye_pulse = abs(np.sin(current_time / 200.0))
+                eye_brightness = int(255 * (0.8 + eye_pulse * 0.2))
+                eye_color = (eye_brightness, eye_brightness, eye_brightness)
+                pygame.draw.circle(self.screen, eye_color, (px + 7, py + 7), 4)
+                pygame.draw.circle(self.screen, eye_color, 
+                                  (px + self.cell_size - 7, py + 7), 4)
+                pygame.draw.circle(self.screen, glow_color, (px + 7, py + 7), 3)
+                pygame.draw.circle(self.screen, glow_color, 
+                                  (px + self.cell_size - 7, py + 7), 3)
             else:
-                # Тело - энергетические сегменты
-                body_rect = pygame.Rect(
-                    px + margin, py + margin,
-                    self.cell_size - margin * 2, self.cell_size - margin * 2
-                )
+                # Тело - яркое с градиентом
+                body_alpha = 0.7 + body_progress * 0.3
+                body_color = tuple(int(c * body_alpha) for c in snake_color)
+                
+                body_rect = pygame.Rect(px + margin, py + margin,
+                                       self.cell_size - margin * 2, self.cell_size - margin * 2)
                 
                 # Свечение тела
-                pygame.draw.rect(self.screen, tuple(int(c * 0.3) for c in snake_color), 
-                               body_rect, width=1, border_radius=3)
-                
+                glow_alpha = 0.4 * body_alpha
+                pygame.draw.rect(self.screen, tuple(int(c * glow_alpha) for c in snake_color), 
+                               body_rect, width=2, border_radius=5)
                 # Основной цвет
-                pygame.draw.rect(self.screen, snake_color, body_rect, border_radius=3)
+                pygame.draw.rect(self.screen, body_color, body_rect, border_radius=5)
                 
                 # Центральная точка энергии
                 center = (px + self.cell_size // 2, py + self.cell_size // 2)
-                brighter = tuple(min(255, int(c * 1.5)) for c in snake_color)
-                pygame.draw.circle(self.screen, brighter, center, 2)
+                center_brightness = int(200 + body_progress * 55)
+                center_color = tuple(min(255, int(c * (center_brightness / 255.0))) for c in snake_color)
+                pygame.draw.circle(self.screen, center_color, center, 3)
                 
-                # Тонкая светящаяся линия для связи сегментов
+                # Яркая светящаяся линия связи
                 if i > 0:
                     prev_pos = snake.body[i-1]
                     prev_px = prev_pos[0] * self.cell_size + self.cell_size // 2
                     prev_py = prev_pos[1] * self.cell_size + self.cell_size // 2
                     curr_px = x * self.cell_size + self.cell_size // 2
                     curr_py = y * self.cell_size + self.cell_size // 2
-                    pygame.draw.line(self.screen, tuple(int(c * 0.4) for c in snake_color),
-                                    (prev_px, prev_py), (curr_px, curr_py), 1)
+                    line_alpha = 0.7 * body_alpha
+                    line_color = tuple(int(c * line_alpha) for c in snake_color)
+                    pygame.draw.line(self.screen, line_color, (prev_px, prev_py), (curr_px, curr_py), 3)
     
     def draw_walls(self, walls):
         """Отрисовка статичных стен (препятствий)."""
@@ -435,83 +515,127 @@ class Visualizer:
             self.screen.blit(bonus_text, bonus_rect)
     
     def draw_food(self, food_pos):
-        """Отрисовка еды-энергии с эффектом вспышки."""
+        """СТРИМ-ДИЗАЙН: Яркая неоновая еда с мощными эффектами."""
         x, y = food_pos
         px = x * self.cell_size
         py = y * self.cell_size
         center = (px + self.cell_size // 2, py + self.cell_size // 2)
         
-        # Плавная пульсация
-        pulse = abs(np.sin(pygame.time.get_ticks() / 300))
-        pulse_size = int(pulse * 5)
+        current_time = pygame.time.get_ticks()
+        import math
         
-        # Магнитное свечение (5 слоёв для эффекта притяжения)
-        for layer in range(5, 0, -1):
+        # Мощная пульсация (быстрая и заметная)
+        pulse1 = abs(np.sin(current_time / 200.0))
+        pulse2 = abs(np.sin(current_time / 350.0))
+        pulse_size = int((pulse1 * 0.7 + pulse2 * 0.3) * 8)
+        
+        # Многослойное магнитное свечение (10 слоев для максимального эффекта)
+        for layer in range(10, 0, -1):
             radius = self.cell_size // 2 + pulse_size + layer * 3
-            alpha = 1.0 / (layer + 1) * 0.25
+            alpha = 1.0 / (layer + 1) * 0.5 * (0.9 + pulse1 * 0.1)
             glow_col = tuple(int(c * alpha) for c in self.COLORS['food_glow'])
             pygame.draw.circle(self.screen, glow_col, center, radius, width=1)
         
-        # Основной импульсный круг
-        pygame.draw.circle(self.screen, self.COLORS['food'], center, 
-                          self.cell_size // 2 + pulse_size - 1, width=1)
+        # Вращающиеся частицы (больше частиц для эффекта)
+        particle_count = 8
+        rotation = current_time / 600.0
+        for i in range(particle_count):
+            angle = (i / particle_count) * 2 * math.pi + rotation
+            particle_dist = self.cell_size // 2 + pulse_size + 8
+            particle_x = center[0] + int(math.cos(angle) * particle_dist)
+            particle_y = center[1] + int(math.sin(angle) * particle_dist)
+            particle_alpha = 0.8 + pulse1 * 0.2
+            particle_color = tuple(int(c * particle_alpha) for c in self.COLORS['food_particles'])
+            pygame.draw.circle(self.screen, particle_color, (particle_x, particle_y), 3)
         
-        # Ядро энергии
-        core_radius = self.cell_size // 2 - 3
+        # Основной круг - яркий неон
+        outer_radius = self.cell_size // 2 + pulse_size
+        pygame.draw.circle(self.screen, self.COLORS['food'], center, outer_radius, width=3)
+        
+        # Средний слой
+        mid_radius = self.cell_size // 2 + pulse_size // 2
+        mid_color = tuple(int(c * 0.9) for c in self.COLORS['food'])
+        pygame.draw.circle(self.screen, mid_color, center, mid_radius, width=2)
+        
+        # Ядро - максимальная яркость
+        core_radius = self.cell_size // 2 - 1
         pygame.draw.circle(self.screen, self.COLORS['food'], center, core_radius)
         
-        # Внутреннее свечение с градиентом
+        # Внутреннее белое ядро
         inner_radius = core_radius - 3
-        pygame.draw.circle(self.screen, (255, 150, 180), center, inner_radius)
+        pygame.draw.circle(self.screen, self.COLORS['food_core'], center, inner_radius)
         
-        # Световой крест для эффекта "излучения"
-        cross_size = int(pulse_size + 3)
-        pygame.draw.line(self.screen, self.COLORS['food_flash'],
-                        (center[0] - cross_size, center[1]),
-                        (center[0] + cross_size, center[1]), 2)
-        pygame.draw.line(self.screen, self.COLORS['food_flash'],
-                        (center[0], center[1] - cross_size),
-                        (center[0], center[1] + cross_size), 2)
+        # Вращающийся световой крест (быстрее)
+        cross_rotation = current_time / 800.0
+        cross_size = int(pulse_size + 6)
+        for i in range(4):
+            angle = (i * math.pi / 2) + cross_rotation
+            start_x = center[0] + int(math.cos(angle) * (inner_radius - 1))
+            start_y = center[1] + int(math.sin(angle) * (inner_radius - 1))
+            end_x = center[0] + int(math.cos(angle) * cross_size)
+            end_y = center[1] + int(math.sin(angle) * cross_size)
+            flash_alpha = 0.9 + pulse1 * 0.1
+            flash_color = tuple(int(c * flash_alpha) for c in self.COLORS['food_flash'])
+            pygame.draw.line(self.screen, flash_color, (start_x, start_y), (end_x, end_y), 3)
         
         # Яркая центральная точка
-        pygame.draw.circle(self.screen, (255, 255, 255), center, 2)
+        core_brightness = int(255 * (0.9 + pulse1 * 0.1))
+        core_color = (core_brightness, core_brightness, core_brightness)
+        pygame.draw.circle(self.screen, core_color, center, 4)
+        pygame.draw.circle(self.screen, self.COLORS['food_flash'], center, 3)
         
-        # Эффект вспышки (если только что появилась)
+        # Эффект вспышки
         if self.food_flash_alpha > 0:
-            pygame.draw.circle(self.screen, self.COLORS['food_flash'], 
-                             center, self.food_flash_radius, width=1)
-            self.food_flash_alpha = max(0, self.food_flash_alpha - 5)
-            self.food_flash_radius += 2
+            flash_color = tuple(int(c * (self.food_flash_alpha / 255.0)) for c in self.COLORS['food_flash'])
+            pygame.draw.circle(self.screen, flash_color, center, self.food_flash_radius, width=3)
+            self.food_flash_alpha = max(0, self.food_flash_alpha - 10)
+            self.food_flash_radius += 4
     
     def draw_game_status_bar(self, snake):
         """Отрисовка статус-бара внизу игрового поля (счёт и голод)."""
+        current_time = pygame.time.get_ticks()
+        
         grid_size_px = self.grid_size * self.cell_size
         bar_y = grid_size_px
         bar_height = self.height - grid_size_px
         bar_width = grid_size_px
         
-        # Фон статус-бара
-        pygame.draw.rect(self.screen, self.COLORS['ui_bg'], 
+        # Фон статус-бара - темный с неоновой границей
+        pygame.draw.rect(self.screen, self.COLORS['ui_bg_solid'], 
                         (0, bar_y, bar_width, bar_height))
         
-        # Разделительная линия сверху
-        pygame.draw.line(self.screen, (0, 255, 255), 
-                        (0, bar_y), (bar_width, bar_y), 2)
+        # Яркая неоновая разделительная линия
+        line_pulse = abs(np.sin(current_time / 1000.0)) * 0.4 + 0.6
+        line_color = tuple(int(c * line_pulse) for c in self.COLORS['ui_border'])
+        pygame.draw.line(self.screen, line_color, 
+                        (0, bar_y), (bar_width, bar_y), 4)
+        # Свечение линии
+        glow_color = tuple(int(c * 0.5) for c in self.COLORS['ui_border'])
+        pygame.draw.line(self.screen, glow_color, 
+                        (0, bar_y - 1), (bar_width, bar_y - 1), 2)
+        pygame.draw.line(self.screen, glow_color, 
+                        (0, bar_y + 1), (bar_width, bar_y + 1), 2)
         
         padding = 20
         y_offset = bar_y + padding
         
-        # Счёт
+        # Счёт - яркий белый текст
         score_text = self.small_font.render('SCORE:', True, self.COLORS['text'])
         self.screen.blit(score_text, (padding, y_offset))
         
         score_value = int(snake.get_fitness())
-        score_display = self.font_large.render(f'{score_value}', True, self.COLORS['text_accent'])
+        score_pulse = abs(np.sin(current_time / 600.0)) * 0.3 + 0.7
+        score_color = tuple(int(c * score_pulse) for c in self.COLORS['text_accent'])
+        score_display = self.font_large.render(f'{score_value}', True, score_color)
+        # Свечение текста
+        score_glow = self.font_large.render(f'{score_value}', True, 
+                                           tuple(int(c * 0.3) for c in score_color))
+        self.screen.blit(score_glow, (padding + 2, y_offset + 27))
         self.screen.blit(score_display, (padding, y_offset + 25))
         
         x_mid = bar_width // 2
         
-        # Голод (индикатор)
+        # Голод - яркий текст
         hunger_text = self.small_font.render('HUNGER:', True, self.COLORS['text'])
         self.screen.blit(hunger_text, (x_mid, y_offset))
         
@@ -521,41 +645,60 @@ class Visualizer:
         hunger_bar_width = bar_width // 2 - padding
         hunger_bar_height = 30
         
-        # Макс голод = 80 шагов (8 секунд)
-        max_hunger = 80
-        hunger_level = max(0, max_hunger - snake.steps_without_food)
-        hunger_percent = hunger_level / max_hunger
+        # Макс голод = 8 секунд (по времени, не по шагам)
+        max_hunger_seconds = 8.0
+        hunger_percent = 1.0 - snake.get_hunger_percent(max_hunger_seconds)
+        hunger_percent = max(0.0, min(1.0, hunger_percent))  # Ограничиваем 0-1
         
         # Фон прогресс-бара
-        pygame.draw.rect(self.screen, (30, 30, 40), 
-                        (hunger_bar_x, hunger_bar_y, hunger_bar_width, hunger_bar_height))
+        pygame.draw.rect(self.screen, self.COLORS['progress_bar_bg'], 
+                        (hunger_bar_x, hunger_bar_y, hunger_bar_width, hunger_bar_height), 
+                        border_radius=5)
         
-        # Заполнение прогресс-бара (цвет зависит от уровня голода)
+        # Заполнение прогресс-бара (яркие неоновые цвета)
         fill_width = int(hunger_bar_width * hunger_percent)
         if hunger_percent > 0.5:
-            hunger_color = (0, 255, 100)  # Зелёный
+            hunger_color = self.COLORS['progress_bar']  # Яркий зеленый
         elif hunger_percent > 0.3:
-            hunger_color = (255, 215, 0)  # Жёлтый
+            hunger_color = self.COLORS['progress_bar_warning']  # Яркий желтый
         else:
-            hunger_color = (255, 50, 50)  # Красный
+            hunger_color = self.COLORS['progress_bar_danger']  # Яркий красный
         
         if fill_width > 0:
-            pygame.draw.rect(self.screen, hunger_color, 
-                           (hunger_bar_x, hunger_bar_y, fill_width, hunger_bar_height))
+            # Градиент заполнения
+            pulse = abs(np.sin(current_time / 300.0)) * 0.2 + 0.8
+            fill_color = tuple(int(c * pulse) for c in hunger_color)
+            
+            # Свечение заполнения
+            pygame.draw.rect(self.screen, tuple(int(c * 0.4) for c in fill_color), 
+                           (hunger_bar_x, hunger_bar_y, fill_width, hunger_bar_height), 
+                           border_radius=4)
+            # Основное заполнение
+            pygame.draw.rect(self.screen, fill_color, 
+                           (hunger_bar_x, hunger_bar_y, fill_width, hunger_bar_height), 
+                           border_radius=4)
             
             # Анимация пульсации при критическом уровне
             if hunger_percent < 0.3:
-                pulse = abs(np.sin(pygame.time.get_ticks() / 200))
-                pulse_alpha = int(50 + pulse * 30)
+                pulse2 = abs(np.sin(current_time / 200.0))
+                pulse_alpha = int(100 + pulse2 * 155)
                 pulse_overlay = pygame.Surface((fill_width, hunger_bar_height))
                 pulse_overlay.fill(hunger_color)
                 pulse_overlay.set_alpha(pulse_alpha)
                 self.screen.blit(pulse_overlay, (hunger_bar_x, hunger_bar_y))
         
-        # Граница прогресс-бара
-        pygame.draw.rect(self.screen, self.COLORS['text'], 
+        # Яркая неоновая граница прогресс-бара
+        border_pulse = abs(np.sin(current_time / 1500.0)) * 0.4 + 0.6
+        border_color = tuple(int(c * border_pulse) for c in self.COLORS['ui_border'])
+        pygame.draw.rect(self.screen, border_color, 
                         (hunger_bar_x, hunger_bar_y, hunger_bar_width, hunger_bar_height), 
-                        width=2)
+                        width=3, border_radius=5)
+        # Свечение границы
+        glow_border = tuple(int(c * 0.4) for c in border_color)
+        pygame.draw.rect(self.screen, glow_border, 
+                        (hunger_bar_x - 1, hunger_bar_y - 1, 
+                         hunger_bar_width + 2, hunger_bar_height + 2), 
+                        width=1, border_radius=6)
         
         # Текст уровня голода
         hunger_level_text = self.tiny_font.render(f'{int(hunger_percent * 100)}%', True, 
@@ -566,41 +709,65 @@ class Visualizer:
         self.screen.blit(hunger_level_text, hunger_level_rect)
     
     def draw_stats(self, generation: int, best_fitness: float, avg_fitness: float):
-        """Отрисовка улучшенной статистики."""
+        """Отрисовка улучшенной статистики с современным дизайном."""
         x_offset = self.grid_size * self.cell_size
         y_offset = 0
         panel_width = self.width - x_offset
         
-        # Фон панели статистики (цифровой терминал)
-        pygame.draw.rect(self.screen, self.COLORS['ui_bg'], 
+        current_time = pygame.time.get_ticks()
+        
+        # Фон панели - темный с неоновой границей
+        pygame.draw.rect(self.screen, self.COLORS['ui_bg_solid'], 
                         (x_offset, 0, panel_width, self.height))
         
-        # Сканирующая линия UI
-        scan_y = int(pygame.time.get_ticks() / 50) % self.height
-        pygame.draw.line(self.screen, self.COLORS['text_scan'], 
-                        (x_offset + 10, scan_y), (x_offset + panel_width - 10, scan_y), 1)
+        # Яркая неоновая разделительная линия
+        border_pulse = abs(np.sin(current_time / 1500.0)) * 0.4 + 0.6
+        border_color = tuple(int(c * border_pulse) for c in self.COLORS['ui_border'])
+        pygame.draw.line(self.screen, border_color, 
+                        (x_offset, 0), (x_offset, self.height), 4)
+        # Многослойное свечение границы
+        for glow_layer in range(3, 0, -1):
+            glow_alpha = 0.3 / glow_layer
+            glow_border = tuple(int(c * glow_alpha) for c in self.COLORS['ui_border'])
+            offset = glow_layer
+            pygame.draw.line(self.screen, glow_border, 
+                            (x_offset - offset, 0), (x_offset - offset, self.height), 1)
+            pygame.draw.line(self.screen, glow_border, 
+                            (x_offset + offset, 0), (x_offset + offset, self.height), 1)
         
-        # Разделительная линия терминала
-        pygame.draw.line(self.screen, (0, 255, 255), 
-                        (x_offset, 0), (x_offset, self.height), 2)
-        pygame.draw.line(self.screen, (0, 150, 150), 
-                        (x_offset - 1, 0), (x_offset - 1, self.height), 1)
+        # Сканирующая линия - яркая зеленая
+        scan_y = int(current_time / 40) % self.height
+        scan_alpha = abs(np.sin(current_time / 150.0)) * 0.6 + 0.4
+        scan_color = tuple(int(c * scan_alpha) for c in self.COLORS['text_scan'])
+        pygame.draw.line(self.screen, scan_color, 
+                        (x_offset + 10, scan_y), (x_offset + panel_width - 10, scan_y), 3)
+        # Свечение сканирующей линии
+        pygame.draw.line(self.screen, tuple(int(c * 0.4) for c in scan_color), 
+                        (x_offset + 10, scan_y - 1), (x_offset + panel_width - 10, scan_y - 1), 1)
+        pygame.draw.line(self.screen, tuple(int(c * 0.4) for c in scan_color), 
+                        (x_offset + 10, scan_y + 1), (x_offset + panel_width - 10, scan_y + 1), 1)
         
         # Заголовок
         x_offset += 20
         y_offset += 30
         
-        # Заголовок в стиле терминала
-        title_text = f'[{generation}] СИСТЕМА'
+        # Яркий заголовок с неоновым свечением
+        title_text = f'GEN {generation}'
+        title_glow = self.font_large.render(title_text, True, 
+                                          tuple(int(c * 0.4) for c in self.COLORS['text_highlight']))
+        self.screen.blit(title_glow, (x_offset + 3, y_offset + 3))
         title = self.font_large.render(title_text, True, self.COLORS['text'])
         self.screen.blit(title, (x_offset, y_offset))
         
-        # Мигающая курсорная линия
-        if (pygame.time.get_ticks() // 500) % 2:
-            cursor_x = x_offset + title.get_width()
-            pygame.draw.line(self.screen, self.COLORS['text_scan'],
+        # Мигающая курсорная линия с пульсацией
+        cursor_blink = (current_time // 500) % 2
+        if cursor_blink:
+            cursor_x = x_offset + title.get_width() + 5
+            cursor_pulse = abs(np.sin(current_time / 300.0)) * 0.5 + 0.5
+            cursor_color = tuple(int(c * cursor_pulse) for c in self.COLORS['text_scan'])
+            pygame.draw.line(self.screen, cursor_color,
                            (cursor_x, y_offset),
-                           (cursor_x, y_offset + title.get_height()), 2)
+                           (cursor_x, y_offset + title.get_height()), 3)
         
         y_offset += 50
         
@@ -612,17 +779,26 @@ class Visualizer:
         ]
         
         for idx, (label, value) in enumerate(stats_items):
-            # Мигающая подсветка строки (эффект сканирования)
-            if scan_y - 20 <= y_offset <= scan_y + 20:
+            # Подсветка строки при сканировании
+            scan_distance = abs(scan_y - y_offset)
+            if scan_distance < 35:
+                highlight_alpha = max(0, 1.0 - scan_distance / 35.0) * 0.4
                 highlight_rect = pygame.Rect(x_offset - 10, y_offset - 2, panel_width - 20, 32)
-                pygame.draw.rect(self.screen, (0, 50, 50), highlight_rect, border_radius=2)
+                highlight_color = tuple(int(c * highlight_alpha) for c in self.COLORS['text_scan'])
+                pygame.draw.rect(self.screen, highlight_color, highlight_rect, border_radius=4)
             
-            # Метка
+            # Метка - яркий белый текст
             label_text = self.small_font.render(label, True, self.COLORS['text'])
             self.screen.blit(label_text, (x_offset, y_offset))
             
-            # Значение с эффектом свечения
-            value_text = self.font.render(value, True, self.COLORS['text_accent'])
+            # Значение - яркий золотой с пульсацией
+            value_pulse = abs(np.sin(current_time / 800.0 + idx * 0.5)) * 0.3 + 0.7
+            value_color = tuple(int(c * value_pulse) for c in self.COLORS['text_accent'])
+            # Свечение значения
+            value_glow = self.font.render(value, True, 
+                                        tuple(int(c * 0.4 * value_pulse) for c in value_color))
+            self.screen.blit(value_glow, (x_offset + 122, y_offset + 2))
+            value_text = self.font.render(value, True, value_color)
             self.screen.blit(value_text, (x_offset + 120, y_offset))
             y_offset += 35
         
@@ -652,31 +828,41 @@ class Visualizer:
         y_offset -= 10
         
         for instr in instructions:
-            text = self.tiny_font.render(instr, True, (0, 150, 150))
+            text = self.tiny_font.render(instr, True, self.COLORS['text_dim'])
             self.screen.blit(text, (x_offset, y_offset))
             y_offset += 22
         
         # График прогресса
         if len(self.evolution.best_fitness_history) > 1:
             y_offset += 20
-            chart_title = self.small_font.render('EVOLUTION GRAPH:', True, self.COLORS['text'])
+            chart_title = self.small_font.render('EVOLUTION:', True, self.COLORS['text'])
             self.screen.blit(chart_title, (x_offset, y_offset))
             y_offset += 25
             
             self.draw_mini_chart(x_offset, y_offset, 300, 80)
     
     def draw_mini_chart(self, x, y, width, height):
-        """Отрисовка мини-графика в стиле терминала."""
+        """СТРИМ-ДИЗАЙН: Яркий неоновый график."""
         if len(self.evolution.best_fitness_history) < 2:
             return
         
-        # Фон графика (осциллограф)
-        pygame.draw.rect(self.screen, (5, 10, 15), (x, y, width, height))
-        pygame.draw.rect(self.screen, (0, 150, 150), (x, y, width, height), 2)
+        current_time = pygame.time.get_ticks()
         
-        # Сетка осциллографа
+        # Темный фон графика
+        pygame.draw.rect(self.screen, self.COLORS['chart_bg'], (x, y, width, height))
+        # Яркая неоновая граница
+        border_pulse = abs(np.sin(current_time / 1500.0)) * 0.4 + 0.6
+        border_color = tuple(int(c * border_pulse) for c in self.COLORS['ui_border'])
+        pygame.draw.rect(self.screen, border_color, (x, y, width, height), 3)
+        # Свечение границы
+        glow_border = tuple(int(c * 0.3) for c in border_color)
+        pygame.draw.rect(self.screen, glow_border, (x - 1, y - 1, width + 2, height + 2), 1)
+        
+        # Сетка осциллографа - приглушенный неон
         for grid_y in range(y + 10, y + height - 10, 20):
-            pygame.draw.line(self.screen, (0, 50, 50), (x + 5, grid_y), (x + width - 5, grid_y), 1)
+            grid_alpha = 0.2
+            grid_color = tuple(int(c * grid_alpha) for c in self.COLORS['grid_dim'])
+            pygame.draw.line(self.screen, grid_color, (x + 5, grid_y), (x + width - 5, grid_y), 1)
         
         # Данные
         history = self.evolution.best_fitness_history[-50:]  # Последние 50 поколений
@@ -690,39 +876,69 @@ class Visualizer:
                 points.append((px, py))
             
             if len(points) > 1:
-                # Тень линии
-                shadow_points = [(px, py + 1) for px, py in points]
-                pygame.draw.lines(self.screen, (0, 20, 20), False, shadow_points, 2)
+                # Многослойная тень линии для глубины
+                for shadow_offset in [3, 2, 1]:
+                    shadow_alpha = 0.1 / shadow_offset
+                    shadow_points = [(px, py + shadow_offset) for px, py in points]
+                    shadow_color = tuple(int(c * shadow_alpha) for c in (0, 0, 0))
+                    pygame.draw.lines(self.screen, shadow_color, False, shadow_points, 2)
                 
-                # Основная линия с эффектом свечения
-                pygame.draw.lines(self.screen, (0, 255, 200), False, points, 2)
+                # Яркая неоновая линия графика
+                for i in range(len(points) - 1):
+                    p1 = points[i]
+                    p2 = points[i + 1]
+                    # Градиент яркости
+                    line_progress = i / (len(points) - 1)
+                    line_alpha = 0.7 + line_progress * 0.3
+                    line_color = tuple(int(c * line_alpha) for c in self.COLORS['chart_line'])
+                    pygame.draw.line(self.screen, line_color, p1, p2, 4)
                 
-                # Эффект "развёртки" для конца линии
-                pulse = abs(np.sin(pygame.time.get_ticks() / 400))
+                # Эффект "развёртки" - яркое свечение
+                pulse = abs(np.sin(current_time / 300.0))
                 if points:
                     last_px, last_py = points[-1]
-                    end_glow = int(4 + pulse * 2)
-                    pygame.draw.circle(self.screen, (0, 255, 200), (last_px, last_py), end_glow)
-                    pygame.draw.circle(self.screen, (0, 150, 150), (last_px, last_py), 3)
-                    pygame.draw.circle(self.screen, (100, 255, 255), (last_px, last_py), 2)
+                    # Многослойное свечение
+                    for glow_layer in range(5, 0, -1):
+                        end_glow = int(4 + pulse * 4 + glow_layer * 3)
+                        glow_alpha = 1.0 / (glow_layer + 1) * 0.5
+                        glow_color = tuple(int(c * glow_alpha) for c in self.COLORS['chart_glow'])
+                        pygame.draw.circle(self.screen, glow_color, (last_px, last_py), end_glow)
+                    # Основная точка - яркая
+                    pygame.draw.circle(self.screen, self.COLORS['chart_line'], (last_px, last_py), 5)
+                    pygame.draw.circle(self.screen, self.COLORS['chart_glow'], (last_px, last_py), 3)
+                    pygame.draw.circle(self.screen, (255, 255, 255), (last_px, last_py), 2)
     
     def animate_best_snake(self):
         """Анимация лучшей змейки, показывающая как она играет."""
         if self.demo_snake is None:
             return
         
+        # Проверка победы: змейка заполнила всё поле
+        max_grid_size = self.grid_size * self.grid_size
+        if self.demo_snake.alive and len(self.demo_snake.body) >= max_grid_size:
+            # Победа!
+            self.demo_snake.fitness += 10000.0
+            self.demo_snake.alive = False
+            print("🎉 ПОБЕДА! Змейка заполнила всё поле!")
+        
+        # Проверка смерти от голода (по времени, не по шагам)
+        if self.demo_snake.alive:
+            time_without_food = self.demo_snake.get_time_without_food()
+            if time_without_food > 8.0:  # 8 секунд без еды = смерть
+                self.demo_snake.alive = False
+        
         # Один шаг игры
         if self.demo_step < self.demo_max_steps and self.demo_snake.alive:
             # Получение входных данных для мозга (для совместимости берём первую еду)
             food_pos = self.demo_food_positions[0] if self.demo_food_positions else (5, 5)
-            all_walls = self.evolution.environment.walls + [(x, y) for x, y, _, _ in self.evolution.environment.moving_walls]
-            inputs = self.demo_snake.get_view(food_pos, walls=all_walls)
+            # Препятствия удалены - пустой список стен
+            inputs = self.demo_snake.get_view(food_pos, walls=[])
             
             # Мозг принимает решение
             action = self.demo_snake.brain.think(inputs)
             
-            # Движение
-            move_success = self.demo_snake.move(action, walls=all_walls)
+            # Движение (без препятствий)
+            move_success = self.demo_snake.move(action, walls=[])
             
             if move_success:
                 # Проверка поедания еды (несколько еды одновременно)
@@ -743,25 +959,14 @@ class Visualizer:
                                 self.demo_food_positions.append(random.choice(free_positions))
                         break
                 
-                # Проверка ядов
-                for poison_pos in self.evolution.environment.poisons:
-                    if head_pos == poison_pos:
-                        self.demo_snake.alive = False
-                        break
-                
-                # Проверка бонусов
-                for i, bonus_pos in enumerate(self.evolution.environment.bonuses):
-                    if head_pos == bonus_pos:
-                        self.demo_snake.fitness += self.demo_snake.fitness * 0.5
-                        break
+                # Яды и бонусы удалены
                 
                 if not food_eaten:
                     self.demo_snake.remove_tail()
                 
                 self.demo_snake.update_fitness()
             else:
-                # Движение неудачно (стена/голод) - но время всё равно идёт
-                # steps_without_food уже увеличен в move() при неудаче
+                # Движение неудачно (столкновение) - змейка уже мертва
                 pass
             
             self.demo_step += 1
@@ -774,6 +979,9 @@ class Visualizer:
         
         # Подготовка демо-змейки для анимации
         if self.demo_snake is None:
+            # Сброс таймера смерти
+            self.death_timer = 0
+            
             # Эффект вспышки нового поколения
             self.generation_flash = 255
             self.generation_text = self.evolution.generation
@@ -815,32 +1023,53 @@ class Visualizer:
             except:
                 pass  # Игнорируем ошибки событий
             
-            # Авторежим - переход к следующему поколению только при смерти или застревании
-            if auto_mode and not paused:
-                # Проверка условий для перехода к следующему поколению
-                should_advance = False
+            # Проверка победы или смерти змейки
+            if self.demo_snake and not self.demo_snake.alive and not paused:
+                # Проверяем, была ли это победа (fitness >= 10000)
+                is_victory = self.demo_snake.fitness >= 10000.0
                 
-                # Если змейка умерла
-                if self.demo_snake and not self.demo_snake.alive:
-                    self.play_sound_death()  # Звук смерти
-                    should_advance = True
+                # Запускаем таймер (если еще не запущен)
+                if self.death_timer == 0:
+                    if is_victory:
+                        print("🎉 ПОБЕДА! Змейка заполнила всё поле!")
+                        # Можно добавить звук победы
+                    else:
+                        self.play_sound_death()  # Звук смерти
+                    self.death_timer = pygame.time.get_ticks()
                 
-                # Если змейка застряла (не ест >10 секунд = 100 шагов при 10 fps)
-                if self.demo_snake and self.demo_step > 30:
-                    steps_without_food = self.demo_step - self.demo_last_food_step
-                    if steps_without_food > 100:  # 10 секунд при 10 fps
-                        self.play_sound_stuck()  # Звук застревания
-                        should_advance = True
-                
-                if should_advance:
+                # Задержка перед переходом (2 секунды для победы, 1 секунда для смерти)
+                delay = 2000 if is_victory else 1000
+                if pygame.time.get_ticks() - self.death_timer > delay:
                     self.demo_snake = None
                     self.demo_step = 0
                     self.demo_last_food_step = 0
+                    self.death_timer = 0
                     # Сброс флагов звуков
                     self.last_sound_eat = False
                     self.last_sound_death = False
                     self.last_sound_stuck = False
+                    
+                    # Если победа, возвращаем специальный код
+                    if is_victory:
+                        return "VICTORY"
                     return True
+            
+            # Авторежим - дополнительная проверка застревания
+            if auto_mode and not paused:
+                # Если змейка застряла (не ест >10 секунд по времени)
+                if self.demo_snake and self.demo_snake.alive:
+                    time_without_food = self.demo_snake.get_time_without_food()
+                    if time_without_food > 10.0:  # 10 секунд без еды = застревание
+                        self.play_sound_stuck()  # Звук застревания
+                        pygame.time.wait(300)  # Небольшая задержка
+                        self.demo_snake = None
+                        self.demo_step = 0
+                        self.demo_last_food_step = 0
+                        # Сброс флагов звуков
+                        self.last_sound_eat = False
+                        self.last_sound_death = False
+                        self.last_sound_stuck = False
+                        return True
             
             # Очистка экрана
             self.screen.fill(self.COLORS['background'])
@@ -848,15 +1077,7 @@ class Visualizer:
             # Отрисовка сетки
             self.draw_grid()
             
-            # Отрисовка стен
-            self.draw_walls(self.evolution.environment.walls)
-            
-            # Отрисовка движущихся стен
-            self.draw_moving_walls(self.evolution.environment.moving_walls)
-            
-            # Отрисовка ядов и бонусов
-            self.draw_poisons(self.evolution.environment.poisons)
-            self.draw_bonuses(self.evolution.environment.bonuses)
+            # Препятствия удалены - стены, яды и бонусы не отрисовываются
             
             # Отрисовка демо-змейки или статичной лучшей
             if self.demo_snake:
@@ -886,37 +1107,48 @@ class Visualizer:
             gen, best_fit, avg_fit = self.evolution.get_stats()
             self.draw_stats(gen, best_fit, avg_fit)
             
-            # Индикатор паузы
+            # Индикатор паузы - яркий неоновый
             if paused:
-                pause_text = self.font.render('[PAUSED]', True, (255, 255, 0))
+                pause_text = self.font_large.render('[PAUSED]', True, self.COLORS['text_accent'])
                 pause_rect = pause_text.get_rect(center=(self.width // 2, 30))
-                # Фон для паузы
-                pygame.draw.rect(self.screen, (0, 0, 0, 180), 
-                                (pause_rect.x - 10, pause_rect.y - 5, 
-                                 pause_rect.width + 20, pause_rect.height + 10))
+                # Фон для паузы с свечением
+                pause_bg = pygame.Surface((pause_rect.width + 30, pause_rect.height + 15))
+                pause_bg.set_alpha(220)
+                pause_bg.fill((0, 0, 0))
+                self.screen.blit(pause_bg, (pause_rect.x - 15, pause_rect.y - 7))
+                # Свечение текста
+                pause_glow = self.font_large.render('[PAUSED]', True, 
+                                                  tuple(int(c * 0.4) for c in self.COLORS['text_accent']))
+                self.screen.blit(pause_glow, (pause_rect.x + 2, pause_rect.y + 2))
                 self.screen.blit(pause_text, pause_rect)
             
-            # Эффект вспышки поколения
+            # Эффект вспышки поколения - яркий неоновый
             if self.generation_flash > 0:
                 self.play_sound_generation()  # Звук смены поколения
                 gen_text = f'GENERATION {self.generation_text}'
-                flash_text = self.font_large.render(gen_text, True, 
-                                                   (self.generation_flash, self.generation_flash, self.generation_flash))
+                flash_alpha = self.generation_flash / 255.0
+                flash_color = tuple(int(c * flash_alpha) for c in self.COLORS['generation_flash'])
+                flash_text = self.font_large.render(gen_text, True, flash_color)
                 flash_rect = flash_text.get_rect(center=(self.width // 2, self.height // 2))
                 
-                # Вспышка фона
-                alpha = self.generation_flash // 10
+                # Вспышка фона - неоновая
+                alpha = int(self.generation_flash * 0.3)
                 overlay = pygame.Surface((self.width, self.height))
-                overlay.fill((self.generation_flash, self.generation_flash, self.generation_flash))
+                overlay.fill(self.COLORS['text_highlight'])
                 overlay.set_alpha(alpha)
                 self.screen.blit(overlay, (0, 0))
                 
-                # Текст
+                # Тень текста
                 shadow = self.font_large.render(gen_text, True, (0, 0, 0))
-                self.screen.blit(shadow, (flash_rect.x + 2, flash_rect.y + 2))
+                self.screen.blit(shadow, (flash_rect.x + 3, flash_rect.y + 3))
+                # Свечение текста
+                glow = self.font_large.render(gen_text, True, 
+                                            tuple(int(c * 0.5) for c in flash_color))
+                self.screen.blit(glow, (flash_rect.x + 1, flash_rect.y + 1))
+                # Основной текст
                 self.screen.blit(flash_text, flash_rect)
                 
-                self.generation_flash = max(0, self.generation_flash - 10)
+                self.generation_flash = max(0, self.generation_flash - 12)
             
             pygame.display.flip()
             self.clock.tick(10 if auto_mode else 15)  # Скорость анимации

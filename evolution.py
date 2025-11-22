@@ -65,15 +65,12 @@ class Evolution:
         
         fitness_scores = []
         
-        # Прогрессивное уменьшение max_steps по поколениям
-        # 0-50 gen: 500 шагов, 50-100: 400, 100-150: 350, 150+: 300
+        # Используем max_steps без уменьшения (нужно для заполнения всего поля)
+        # Расчет: поле 20x20 = 400 клеток, начальная длина = 3
+        # Нужно съесть минимум 397 еды
+        # С учетом поиска и неоптимальных путей: ~1000-5000 шагов для хорошей змейки
+        # Для гарантии победы: 100000 шагов более чем достаточно
         dynamic_steps = self.max_steps
-        if self.generation > 150:
-            dynamic_steps = 300
-        elif self.generation > 100:
-            dynamic_steps = 350
-        elif self.generation > 50:
-            dynamic_steps = 400
         
         for snake in self.population:
             fitness = self.environment.play_game(snake, dynamic_steps)
