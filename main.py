@@ -150,14 +150,30 @@ def main():
             if best_snakes:
                 from brain import Brain
                 s_id, gen, fitness, weights_bytes = best_snakes[0]
-                weights, hidden_weights = db.load_snake_weights(weights_bytes, has_hidden=True)
-                if hidden_weights is not None:
-                    initial_brain = Brain(weights=weights, hidden_weights=hidden_weights)
+                loaded_weights = db.load_snake_weights(weights_bytes, has_hidden=True)
+                if len(loaded_weights) == 3:
+                    # Новый формат: (weights1, weights2, weights3)
+                    weights1, weights2, weights3 = loaded_weights
+                    initial_brain = Brain(hidden1_weights=weights1, weights2=weights2, weights3=weights3)
+                    print(f"🧠 Загружен улучшенный мозг (три слоя: 16->32->16->4)")
+                elif len(loaded_weights) == 2:
+                    # Старый формат: (weights, hidden_weights) или (weights1, combined_weights2_3)
+                    weights1, weights2_3 = loaded_weights
+                    if weights2_3 is not None:
+                        # Старый формат объединения - создаем новый мозг
+                        initial_brain = Brain(hidden1_weights=weights1, hidden2_weights=weights2_3)
+                        print(f"🧠 Загружен мозг (старый формат объединения, конвертирован)")
+                    else:
+                        # Очень старый формат - конвертируем в новый
+                        initial_brain = Brain(weights=weights1, hidden_weights=None)
+                        print(f"🧠 Старый формат конвертирован в новый (два скрытых слоя)")
                 else:
-                    # Старый формат - создаем новый мозг
+                    # Неизвестный формат - создаем новый мозг
                     initial_brain = None
-                print(f"✓ Загружена лучшая змейка из сессии #{s_id}, поколение {gen}, fitness {fitness:.1f}")
-                print(f"✓ Продолжаем сессию #{session_id}")
+                    print(f"⚠️  Неизвестный формат весов, начинаем с нового мозга")
+                if initial_brain:
+                    print(f"✓ Загружена лучшая змейка из сессии #{s_id}, поколение {gen}, fitness {fitness:.1f}")
+                    print(f"✓ Продолжаем сессию #{session_id}")
             else:
                 # Проверяем, есть ли история поколений в этой сессии
                 history = db.get_generation_history(args.continue_session)
@@ -227,12 +243,13 @@ def main():
             should_save = (gen % 5 == 0) or (best_fit > getattr(evolution, '_last_saved_fitness', 0))
             if should_save and hasattr(evolution, 'current_best_snake') and evolution.current_best_snake:
                 brain = evolution.current_best_snake.brain
+                # Сохраняем все три слоя весов
                 db.save_best_snake(
                     session_id, 
                     evolution.generation, 
                     best_fit,
-                    brain.weights,
-                    brain.hidden_weights
+                    brain,  # Передаем весь объект brain
+                    None
                 )
                 evolution._last_saved_fitness = best_fit
         

@@ -56,9 +56,10 @@ class Snake:
             walls: список позиций стен [(x, y), ...]
             
         Returns:
-            массив из 12 значений:
+            массив из 16 значений:
             [направление до еды (4 значения),
              опасности по направлениям (4 значения),
+             расстояние до еды по каждому направлению (4 значения),
              длина змейки (нормализованная),
              время без еды (нормализованное),
              расстояние до еды (нормализованное),
@@ -109,6 +110,29 @@ class Snake:
             # Нормализация расстояния опасности
             dangers[i] = 1.0 / (1.0 + dist)
         
+        # Расстояние до еды по каждому направлению (новая информация!)
+        food_distances = np.zeros(4)
+        for i, (dir_x, dir_y) in enumerate(self.DIRECTIONS.values()):
+            # Вычисляем расстояние до еды в этом направлении
+            check_x, check_y = head_x, head_y
+            dist_to_food_dir = 0
+            while True:
+                check_x += dir_x
+                check_y += dir_y
+                # Проверка границ
+                if (check_x < 0 or check_x >= self.grid_size or 
+                    check_y < 0 or check_y >= self.grid_size):
+                    break
+                # Проверка, достигли ли еды в этом направлении
+                if (check_x, check_y) == (food_x, food_y):
+                    break
+                dist_to_food_dir += 1
+                # Ограничиваем максимальное расстояние
+                if dist_to_food_dir > self.grid_size * 2:
+                    break
+            # Нормализация: чем ближе еда в этом направлении, тем больше значение
+            food_distances[i] = 1.0 / (1.0 + dist_to_food_dir)
+        
         # Дополнительная информация для "мышления"
         # Длина змейки (нормализованная: 0-1, где 1 = максимальная длина)
         max_length = self.grid_size * self.grid_size
@@ -141,7 +165,7 @@ class Snake:
             normalized_space
         ])
         
-        return np.concatenate([direction_to_food, dangers, additional_info])
+        return np.concatenate([direction_to_food, dangers, food_distances, additional_info])
     
     def move(self, action: int, walls: List[Tuple[int, int]] = None) -> bool:
         """
@@ -193,12 +217,30 @@ class Snake:
     
     def eat(self):
         """Змейка съедает еду."""
-        # Увеличенная награда за еду + бонус за скорость
-        base_reward = 150
+        # УВЕЛИЧЕННАЯ награда за еду + бонус за скорость
+        base_reward = 200  # Базовая награда за еду
         # Бонус за быструю еду (по времени, не по шагам)
         time_without_food = self.get_time_without_food()
-        speed_bonus = max(0, 50 - int(time_without_food * 10))  # Бонус уменьшается со временем
-        self.fitness += base_reward + speed_bonus
+        speed_bonus = max(0, 100 - int(time_without_food * 10))
+        
+        # Бонус за длину ТОЛЬКО после роста (когда длина увеличилась)
+        # Это предотвращает накопление бонусов без реального роста
+        current_length = len(self.body)
+        length_bonus = current_length * 5  # 5 очков за каждый сегмент (уменьшено с 10)
+        
+        # Дополнительные бонусы за достижение больших длин (только при реальном росте)
+        if current_length >= 400:
+            length_bonus += 50000  # ОГРОМНЫЙ бонус за победу!
+        elif current_length >= 300:
+            length_bonus += 5000  # Бонус за длину >= 300
+        elif current_length >= 200:
+            length_bonus += 2000  # Бонус за длину >= 200
+        elif current_length >= 100:
+            length_bonus += 500  # Бонус за длину >= 100
+        elif current_length >= 50:
+            length_bonus += 100  # Бонус за длину >= 50
+        
+        self.fitness += base_reward + speed_bonus + length_bonus
         self.steps_without_food = 0
         self.last_food_time = time.time()  # Обновляем время последнего поедания
         # Хвост не удаляется - змейка растёт
@@ -227,24 +269,47 @@ class Snake:
     def update_fitness(self):
         """Обновление fitness с учётом времени выживания."""
         if self.alive:
-            # Уменьшена награда за выживание (было 0.5, стало 0.2)
-            self.fitness += 0.2
-            # Штраф за бездействие (если не ест >5 секунд)
+            # Награда за выживание зависит от длины - поощряем рост!
+            base_survival = 0.1  # Базовая награда за выживание
+            length_bonus = len(self.body) * 0.05  # Бонус за длину
+            self.fitness += base_survival + length_bonus
+            
+            # УВЕЛИЧЕННЫЙ штраф за бездействие и кружение на месте
             time_without = self.get_time_without_food()
-            if time_without > 5.0:
-                self.fitness -= 1.0 * (time_without - 5.0)  # Штраф растёт со временем
+            if time_without > 3.0:  # Уменьшено с 5.0 до 3.0
+                penalty = 2.0 * (time_without - 3.0)  # Увеличено с 1.0 до 2.0
+                self.fitness -= penalty
+            # Дополнительный штраф за кружение (если длина не растет)
+            if time_without > 4.0 and len(self.body) <= 5:
+                self.fitness -= 5.0  # Штраф за кружение без роста
     
     def get_fitness(self) -> float:
         """Получить финальный fitness."""
+        # Бонус за длину в финале (умеренный, чтобы не завышать fitness)
+        current_length = len(self.body)
+        length_bonus = current_length * 20  # 20 очков за каждый сегмент (уменьшено с 50)
+        self.fitness += length_bonus
+        
         # Строгий штраф за чрезмерное блуждание без еды (по времени)
         time_without = self.get_time_without_food()
         if time_without > 7.0:
             # Критический штраф за полное застревание (максимальный штраф)
-            self.fitness *= 0.5
+            self.fitness *= 0.3
         elif time_without > 6.0:
             # Прогрессивный штраф: чем дольше, тем больше
-            penalty = (time_without - 6.0) * 10.0
+            penalty = (time_without - 6.0) * 20.0
             self.fitness -= penalty
+        
+        # Дополнительные бонусы за достижение больших длин (только при реальной длине)
+        if current_length >= 400:
+            self.fitness += 50000  # ОГРОМНЫЙ бонус за победу!
+        elif current_length >= 300:
+            self.fitness += 5000  # Уменьшено с 10000
+        elif current_length >= 200:
+            self.fitness += 2000  # Уменьшено с 5000
+        elif current_length >= 100:
+            self.fitness += 500  # Уменьшено с 1000
+        
         return max(0, self.fitness)  # Не может быть отрицательным
     
     def clone(self) -> 'Snake':

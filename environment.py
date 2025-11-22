@@ -155,14 +155,23 @@ class Environment:
             if step % 5 == 0:  # Каждые 5 шагов
                 snake.update_fitness()
             
-            # Дополнительная награда за приближение к еде (только если змейка жива)
+            # УВЕЛИЧЕННАЯ награда за приближение к еде (только если змейка жива)
             # Оптимизация: вычисляем только если змейка жива и не слишком далеко
             if snake.alive:
                 head = snake.get_head()
-                dist_to_food = abs(head[0] - self.food_pos[0]) + abs(head[1] - self.food_pos[1])
-                # Уменьшенная награда за приближение (макс 5)
-                if dist_to_food < 10:  # Только если близко к еде
-                    snake.fitness += 5.0 / (dist_to_food + 1)
+                # Проверяем расстояние до ближайшей еды
+                min_dist = float('inf')
+                for food_pos in self.food_positions:
+                    dist = abs(head[0] - food_pos[0]) + abs(head[1] - food_pos[1])
+                    min_dist = min(min_dist, dist)
+                
+                # УВЕЛИЧЕННАЯ награда за приближение (макс 20 вместо 5)
+                if min_dist < 15:  # Увеличено с 10 до 15
+                    approach_reward = 20.0 / (min_dist + 1)  # Увеличено с 5.0 до 20.0
+                    snake.fitness += approach_reward
+                # Дополнительный бонус за очень близкое расстояние
+                if min_dist <= 2:
+                    snake.fitness += 10.0  # Бонус за близость к еде
         
         # Финальное обновление fitness перед возвратом
         snake.update_fitness()

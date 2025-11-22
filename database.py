@@ -124,19 +124,36 @@ class EvolutionDB:
         session_id: int,
         generation: int,
         fitness: float,
-        weights: np.ndarray,
+        weights,
         hidden_weights: np.ndarray = None
     ):
         """Сохранение лучшей змейки."""
         cursor = self.conn.cursor()
-        # Сохраняем оба слоя весов (если есть скрытый слой)
-        if hidden_weights is not None:
-            # Объединяем веса: сначала первый слой, потом второй
+        # Сохраняем все слои весов (новый формат: 3 слоя)
+        if hasattr(weights, 'weights1'):  # Новый формат с тремя слоями (объект Brain)
+            # Объединяем все три слоя: weights1, weights2, weights3
+            combined = np.concatenate([
+                weights.weights1.flatten(),
+                weights.weights2.flatten(),
+                weights.weights3.flatten()
+            ])
+            weights_bytes = combined.tobytes()
+        elif isinstance(weights, np.ndarray) and hidden_weights is not None:
+            # Старый формат с двумя слоями
             combined_weights = np.concatenate([weights.flatten(), hidden_weights.flatten()])
             weights_bytes = combined_weights.tobytes()
-        else:
+        elif isinstance(weights, np.ndarray):
             # Старый формат (один слой) - для совместимости
             weights_bytes = weights.tobytes()
+        else:
+            # Если передан объект Brain напрямую
+            brain = weights
+            combined = np.concatenate([
+                brain.weights1.flatten(),
+                brain.weights2.flatten(),
+                brain.weights3.flatten()
+            ])
+            weights_bytes = combined.tobytes()
         cursor.execute('''
             INSERT INTO best_snakes (session_id, generation, fitness, weights)
             VALUES (?, ?, ?, ?)
@@ -188,41 +205,75 @@ class EvolutionDB:
         
         return cursor.fetchall()
     
-    def load_snake_weights(self, weights_bytes: bytes, input_size: int = 12, output_size: int = 4, 
-                          hidden_size: int = 16, has_hidden: bool = True) -> Tuple[np.ndarray, np.ndarray]:
+    def load_snake_weights(self, weights_bytes: bytes, input_size: int = 16, output_size: int = 4, 
+                          hidden1_size: int = 32, hidden2_size: int = 16, has_hidden: bool = True) -> Tuple[np.ndarray, np.ndarray]:
         """
         Загрузка весов из базы данных.
         
         Args:
             weights_bytes: сериализованные веса
-            input_size: размер входа
+            input_size: размер входа (16 для нового формата)
             output_size: размер выхода
-            hidden_size: размер скрытого слоя
+            hidden1_size: размер первого скрытого слоя (32)
+            hidden2_size: размер второго скрытого слоя (16)
             has_hidden: есть ли скрытый слой
             
         Returns:
-            кортеж (weights, hidden_weights) или (weights, None) для старого формата
+            кортеж (weights1, combined_weights2_3) для нового формата или (weights, hidden_weights) для старого
         """
         weights = np.frombuffer(weights_bytes, dtype=np.float64)
         
-        if has_hidden:
-            # Новый формат: два слоя
-            total_size = input_size * hidden_size + hidden_size * output_size
-            if len(weights) == total_size:
-                # Разделяем на два слоя
-                first_layer_size = input_size * hidden_size
-                first_layer = weights[:first_layer_size].reshape(input_size, hidden_size)
-                second_layer = weights[first_layer_size:].reshape(hidden_size, output_size)
-                return (first_layer, second_layer)
+        # Новый формат: три слоя (16->32->16->4)
+        new_format_size = input_size * hidden1_size + hidden1_size * hidden2_size + hidden2_size * output_size
+        
+        if len(weights) == new_format_size:
+            # Новый формат с тремя слоями
+            offset = 0
+            size1 = input_size * hidden1_size
+            weights1 = weights[offset:offset+size1].reshape(input_size, hidden1_size)
+            offset += size1
+            
+            size2 = hidden1_size * hidden2_size
+            weights2 = weights[offset:offset+size2].reshape(hidden1_size, hidden2_size)
+            offset += size2
+            
+            size3 = hidden2_size * output_size
+            weights3 = weights[offset:offset+size3].reshape(hidden2_size, output_size)
+            
+            # Возвращаем weights1, weights2, weights3 отдельно
+            return (weights1, weights2, weights3)
+        elif has_hidden:
+            # Старый формат: два слоя (12->16->4 или 8->4)
+            # Пытаемся определить формат по размеру
+            if len(weights) == 12 * 16 + 16 * 4:  # Старый улучшенный формат
+                first_layer = weights[:12*16].reshape(12, 16)
+                second_layer = weights[12*16:].reshape(16, 4)
+                # Конвертируем в новый формат
+                # Расширяем входы с 12 до 16 (добавляем случайные веса)
+                if first_layer.shape[0] < input_size:
+                    extra = np.random.uniform(-0.5, 0.5, (input_size - first_layer.shape[0], first_layer.shape[1]))
+                    first_layer = np.concatenate([first_layer, extra], axis=0)
+                # Расширяем скрытый слой с 16 до 32
+                if first_layer.shape[1] < hidden1_size:
+                    extra = np.random.uniform(-0.5, 0.5, (input_size, hidden1_size - first_layer.shape[1]))
+                    first_layer = np.concatenate([first_layer, extra], axis=1)
+                # Создаем второй скрытый слой
+                weights2 = np.random.uniform(-0.5, 0.5, (hidden1_size, hidden2_size))
+                weights3 = np.random.uniform(-0.5, 0.5, (hidden2_size, output_size))
+                return (first_layer, weights2, weights3)
             else:
-                # Старый формат - создаем случайные веса для скрытого слоя
-                first_layer = weights.reshape(input_size, output_size)
-                hidden_layer = np.random.uniform(-0.1, 0.1, (input_size, hidden_size))
-                output_layer = np.random.uniform(-0.1, 0.1, (hidden_size, output_size))
-                return (hidden_layer, output_layer)
+                # Очень старый формат (8->4) - создаем новый мозг
+                old_input = 8 if len(weights) == 32 else 12
+                old_weights = weights.reshape(old_input, output_size)
+                # Создаем новый формат
+                weights1 = np.random.uniform(-0.5, 0.5, (input_size, hidden1_size))
+                weights2 = np.random.uniform(-0.5, 0.5, (hidden1_size, hidden2_size))
+                weights3 = np.random.uniform(-0.5, 0.5, (hidden2_size, output_size))
+                return (weights1, weights2, weights3)
         else:
             # Старый формат (один слой)
-            return (weights.reshape(input_size, output_size), None)
+            old_input = len(weights) // output_size
+            return (weights.reshape(old_input, output_size), None)
     
     def get_sessions(self, limit: int = 20) -> List[Tuple]:
         """

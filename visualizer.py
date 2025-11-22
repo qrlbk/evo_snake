@@ -90,6 +90,11 @@ class Visualizer:
         self.screen = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption('🐍 Эволюционная Змейка')
         
+        # Анимационные переменные для улучшенной змеи
+        self.snake_animation_time = 0
+        self.snake_wave_offset = 0
+        self.snake_particles = []  # Частицы энергии для змеи
+        
         # Улучшенные шрифты
         try:
             self.font_large = pygame.font.Font(None, 32)
@@ -255,105 +260,231 @@ class Visualizer:
                                    (grid_width, y * self.cell_size + offset), 1)
     
     def draw_snake(self, snake):
-        """СТРИМ-ДИЗАЙН: Яркая неоновая змейка с мощным свечением."""
+        """УЛУЧШЕННЫЙ СТРИМ-ДИЗАЙН: Продвинутая неоновая змейка с 3D эффектами и анимацией."""
+        # Обновляем анимацию
+        current_time = pygame.time.get_ticks()
+        self.snake_animation_time = current_time
+        self.snake_wave_offset = (self.snake_wave_offset + 0.15) % (2 * np.pi)
+        
         # Определяем цвет на основе поколения (яркие неоновые цвета)
         gen = self.evolution.generation if hasattr(self.evolution, 'generation') else 0
         if gen < 100:
             snake_color = self.COLORS['snake_gen1']  # Яркий неоновый зеленый
             glow_color = (0, 255, 200)
+            accent_color = (100, 255, 150)
         elif gen < 500:
             snake_color = self.COLORS['snake_gen2']  # Яркий циан
             glow_color = (100, 255, 255)
+            accent_color = (150, 255, 255)
         elif gen < 1000:
             snake_color = self.COLORS['snake_gen3']  # Яркий пурпурный
             glow_color = (255, 100, 255)
+            accent_color = (255, 150, 255)
         else:
             snake_color = self.COLORS['snake_gen4']  # Яркий желтый (элита)
             glow_color = (255, 255, 150)
+            accent_color = (255, 255, 200)
         
-        # Мощная пульсация энергии
-        current_time = pygame.time.get_ticks()
-        pulse = abs(np.sin(current_time / 150.0))  # Быстрая пульсация
-        pulse_offset = int(pulse * 5)
+        # Мощная пульсация энергии с несколькими частотами
+        pulse1 = abs(np.sin(current_time / 150.0))  # Быстрая пульсация
+        pulse2 = abs(np.sin(current_time / 300.0))  # Медленная пульсация
+        pulse3 = abs(np.sin(current_time / 100.0))  # Очень быстрая для эффектов
+        combined_pulse = (pulse1 + pulse2) / 2.0
+        pulse_offset = int(combined_pulse * 8)
         
+        # Рисуем тело с эффектом волны
         for i, (x, y) in enumerate(snake.body):
             px = x * self.cell_size
             py = y * self.cell_size
             margin = 1
             
-            # Градиент яркости по длине тела
+            # Волна энергии по телу (движется от головы к хвосту)
+            wave_phase = self.snake_wave_offset - (i * 0.5)
+            wave_effect = abs(np.sin(wave_phase)) * 0.3 + 0.7
+            
+            # Градиент яркости по длине тела с волной
             body_progress = i / max(1, len(snake.body) - 1)
             if i == 0:
                 body_progress = 1.0
             
-            if i == 0:  # Голова - мощное свечение
-                # Многослойное пульсирующее свечение (8 слоев для эффекта)
-                for glow_layer in range(8, 0, -1):
-                    glow_size = self.cell_size + pulse_offset + glow_layer * 4
+            # Комбинированная яркость с волной
+            body_alpha = (0.6 + body_progress * 0.4) * wave_effect
+            
+            if i == 0:  # Голова - УЛУЧШЕННОЕ мощное свечение
+                # Расширенное многослойное пульсирующее свечение (12 слоев)
+                for glow_layer in range(12, 0, -1):
+                    glow_size = self.cell_size + pulse_offset + glow_layer * 5
                     glow_rect = pygame.Rect(
                         px - (glow_size - self.cell_size) // 2,
                         py - (glow_size - self.cell_size) // 2,
                         glow_size, glow_size
                     )
-                    alpha = 1.0 / (glow_layer + 1) * 0.6 * (0.8 + pulse * 0.2)
+                    alpha = 1.0 / (glow_layer + 1) * 0.7 * (0.7 + combined_pulse * 0.3)
                     glow_col = tuple(int(c * alpha) for c in glow_color)
-                    pygame.draw.rect(self.screen, glow_col, glow_rect, width=1, border_radius=8)
+                    # Рисуем с градиентом свечения
+                    pygame.draw.rect(self.screen, glow_col, glow_rect, width=2, border_radius=10)
                 
-                # Голова - яркий неон
+                # Внешний ореол (самый большой)
+                halo_size = self.cell_size + pulse_offset + 20
+                halo_rect = pygame.Rect(
+                    px - (halo_size - self.cell_size) // 2,
+                    py - (halo_size - self.cell_size) // 2,
+                    halo_size, halo_size
+                )
+                halo_alpha = 0.3 * combined_pulse
+                halo_col = tuple(int(c * halo_alpha) for c in accent_color)
+                pygame.draw.ellipse(self.screen, halo_col, halo_rect)
+                
+                # 3D эффект с тенью
+                shadow_rect = pygame.Rect(px + 2, py + 2, self.cell_size - 2, self.cell_size - 2)
+                shadow_color = (0, 0, 0, 100)
+                pygame.draw.rect(self.screen, (0, 0, 0), shadow_rect, border_radius=8)
+                
+                # Голова - многослойная с градиентом
                 head_rect = pygame.Rect(px + margin, py + margin,
                                       self.cell_size - margin * 2, self.cell_size - margin * 2)
-                # Внешнее свечение
-                pygame.draw.rect(self.screen, tuple(int(c * 0.8) for c in snake_color), 
-                               head_rect, border_radius=8)
-                # Основной цвет (максимальная яркость)
-                pygame.draw.rect(self.screen, snake_color, head_rect, border_radius=8)
-                # Внутреннее ядро
-                inner_rect = pygame.Rect(px + margin + 3, py + margin + 3,
-                                        self.cell_size - margin * 2 - 6, self.cell_size - margin * 2 - 6)
-                pygame.draw.rect(self.screen, self.COLORS['snake_head_glow'], 
-                               inner_rect, border_radius=5)
                 
-                # Яркие глаза-сенсоры
-                eye_pulse = abs(np.sin(current_time / 200.0))
-                eye_brightness = int(255 * (0.8 + eye_pulse * 0.2))
+                # Внешний слой свечения
+                outer_glow = tuple(int(c * 0.9) for c in snake_color)
+                pygame.draw.rect(self.screen, outer_glow, head_rect, width=3, border_radius=10)
+                
+                # Основной цвет (максимальная яркость с пульсацией)
+                main_brightness = 0.9 + combined_pulse * 0.1
+                main_color = tuple(int(c * main_brightness) for c in snake_color)
+                pygame.draw.rect(self.screen, main_color, head_rect, border_radius=10)
+                
+                # Внутреннее ядро с пульсацией
+                inner_size = int(6 + pulse3 * 3)
+                inner_rect = pygame.Rect(
+                    px + (self.cell_size - inner_size) // 2,
+                    py + (self.cell_size - inner_size) // 2,
+                    inner_size, inner_size
+                )
+                inner_brightness = 0.8 + pulse3 * 0.2
+                inner_color = tuple(int(c * inner_brightness) for c in self.COLORS['snake_head_glow'])
+                pygame.draw.ellipse(self.screen, inner_color, inner_rect)
+                
+                # Улучшенные глаза-сенсоры с анимацией
+                eye_pulse = abs(np.sin(current_time / 180.0))
+                eye_brightness = int(255 * (0.85 + eye_pulse * 0.15))
                 eye_color = (eye_brightness, eye_brightness, eye_brightness)
-                pygame.draw.circle(self.screen, eye_color, (px + 7, py + 7), 4)
-                pygame.draw.circle(self.screen, eye_color, 
-                                  (px + self.cell_size - 7, py + 7), 4)
-                pygame.draw.circle(self.screen, glow_color, (px + 7, py + 7), 3)
-                pygame.draw.circle(self.screen, glow_color, 
-                                  (px + self.cell_size - 7, py + 7), 3)
+                
+                # Левый глаз - многослойный
+                left_eye_pos = (px + 6, py + 6)
+                # Внешнее свечение глаза
+                pygame.draw.circle(self.screen, tuple(int(c * 0.5) for c in glow_color), 
+                                 left_eye_pos, 6)
+                # Основной глаз
+                pygame.draw.circle(self.screen, eye_color, left_eye_pos, 5)
+                # Внутреннее ядро
+                pygame.draw.circle(self.screen, glow_color, left_eye_pos, 3)
+                # Блик
+                pygame.draw.circle(self.screen, (255, 255, 255), 
+                                 (left_eye_pos[0] - 1, left_eye_pos[1] - 1), 1)
+                
+                # Правый глаз - многослойный
+                right_eye_pos = (px + self.cell_size - 6, py + 6)
+                pygame.draw.circle(self.screen, tuple(int(c * 0.5) for c in glow_color), 
+                                 right_eye_pos, 6)
+                pygame.draw.circle(self.screen, eye_color, right_eye_pos, 5)
+                pygame.draw.circle(self.screen, glow_color, right_eye_pos, 3)
+                pygame.draw.circle(self.screen, (255, 255, 255), 
+                                 (right_eye_pos[0] - 1, right_eye_pos[1] - 1), 1)
+                
+                # Энергетические частицы вокруг головы
+                if np.random.random() < 0.3:  # 30% шанс добавить частицу
+                    particle_x = px + np.random.randint(0, self.cell_size)
+                    particle_y = py + np.random.randint(0, self.cell_size)
+                    particle_size = np.random.randint(2, 4)
+                    particle_alpha = np.random.random() * 0.8
+                    particle_col = tuple(int(c * particle_alpha) for c in accent_color)
+                    pygame.draw.circle(self.screen, particle_col, (int(particle_x), int(particle_y)), particle_size)
+                
             else:
-                # Тело - яркое с градиентом
-                body_alpha = 0.7 + body_progress * 0.3
+                # Тело - УЛУЧШЕННОЕ с волновым эффектом
                 body_color = tuple(int(c * body_alpha) for c in snake_color)
+                
+                # 3D эффект с тенью для тела
+                shadow_offset = 1
+                shadow_rect = pygame.Rect(
+                    px + margin + shadow_offset, 
+                    py + margin + shadow_offset,
+                    self.cell_size - margin * 2, 
+                    self.cell_size - margin * 2
+                )
+                pygame.draw.rect(self.screen, (0, 0, 0), shadow_rect, border_radius=6)
                 
                 body_rect = pygame.Rect(px + margin, py + margin,
                                        self.cell_size - margin * 2, self.cell_size - margin * 2)
                 
-                # Свечение тела
-                glow_alpha = 0.4 * body_alpha
-                pygame.draw.rect(self.screen, tuple(int(c * glow_alpha) for c in snake_color), 
-                               body_rect, width=2, border_radius=5)
-                # Основной цвет
-                pygame.draw.rect(self.screen, body_color, body_rect, border_radius=5)
+                # Многослойное свечение тела
+                for glow_layer in range(3, 0, -1):
+                    glow_alpha = (0.3 / glow_layer) * body_alpha
+                    glow_size = self.cell_size - margin * 2 + glow_layer * 2
+                    glow_rect = pygame.Rect(
+                        px + margin - glow_layer,
+                        py + margin - glow_layer,
+                        glow_size, glow_size
+                    )
+                    glow_col = tuple(int(c * glow_alpha) for c in snake_color)
+                    pygame.draw.rect(self.screen, glow_col, glow_rect, width=2, border_radius=6 + glow_layer)
                 
-                # Центральная точка энергии
+                # Основной цвет тела
+                pygame.draw.rect(self.screen, body_color, body_rect, border_radius=6)
+                
+                # Внутренний градиент
+                inner_margin = 2
+                inner_rect = pygame.Rect(
+                    px + margin + inner_margin, 
+                    py + margin + inner_margin,
+                    self.cell_size - margin * 2 - inner_margin * 2, 
+                    self.cell_size - margin * 2 - inner_margin * 2
+                )
+                inner_alpha = body_alpha * 0.6
+                inner_color = tuple(int(c * inner_alpha) for c in accent_color)
+                pygame.draw.rect(self.screen, inner_color, inner_rect, border_radius=4)
+                
+                # Центральная точка энергии с пульсацией
                 center = (px + self.cell_size // 2, py + self.cell_size // 2)
-                center_brightness = int(200 + body_progress * 55)
+                center_pulse = abs(np.sin(current_time / 200.0 - i * 0.3))
+                center_brightness = int(180 + body_progress * 75 + center_pulse * 30)
+                center_size = int(2 + center_pulse * 2)
                 center_color = tuple(min(255, int(c * (center_brightness / 255.0))) for c in snake_color)
-                pygame.draw.circle(self.screen, center_color, center, 3)
+                pygame.draw.circle(self.screen, center_color, center, center_size)
                 
-                # Яркая светящаяся линия связи
+                # Энергетическая линия связи с градиентом
                 if i > 0:
                     prev_pos = snake.body[i-1]
                     prev_px = prev_pos[0] * self.cell_size + self.cell_size // 2
                     prev_py = prev_pos[1] * self.cell_size + self.cell_size // 2
                     curr_px = x * self.cell_size + self.cell_size // 2
                     curr_py = y * self.cell_size + self.cell_size // 2
-                    line_alpha = 0.7 * body_alpha
+                    
+                    # Толстая линия с градиентом
+                    line_width = int(4 + wave_effect * 2)
+                    line_alpha = 0.8 * body_alpha * wave_effect
                     line_color = tuple(int(c * line_alpha) for c in snake_color)
-                    pygame.draw.line(self.screen, line_color, (prev_px, prev_py), (curr_px, curr_py), 3)
+                    
+                    # Рисуем линию с несколькими слоями для эффекта свечения
+                    for layer in range(3, 0, -1):
+                        layer_alpha = line_alpha / (layer + 1)
+                        layer_color = tuple(int(c * layer_alpha) for c in glow_color)
+                        layer_width = line_width + layer * 2
+                        pygame.draw.line(self.screen, layer_color, 
+                                       (prev_px, prev_py), (curr_px, curr_py), layer_width)
+                    
+                    # Основная линия
+                    pygame.draw.line(self.screen, line_color, 
+                                   (prev_px, prev_py), (curr_px, curr_py), line_width)
+                    
+                    # Энергетические частицы вдоль линии
+                    if np.random.random() < 0.1:  # 10% шанс
+                        particle_pos = (
+                            int((prev_px + curr_px) / 2 + np.random.randint(-3, 4)),
+                            int((prev_py + curr_py) / 2 + np.random.randint(-3, 4))
+                        )
+                        particle_col = tuple(int(c * 0.7) for c in accent_color)
+                        pygame.draw.circle(self.screen, particle_col, particle_pos, 2)
     
     def draw_walls(self, walls):
         """Отрисовка статичных стен (препятствий)."""
