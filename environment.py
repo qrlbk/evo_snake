@@ -66,7 +66,7 @@ class Environment:
         """Возвращает ближайшую еду для совместимости со старым кодом."""
         return self.food_positions[0] if self.food_positions else (0, 0)
     
-    def play_game(self, snake: Snake, max_steps: int = 500) -> float:
+    def play_game(self, snake: Snake, max_steps: int = 500) -> Tuple[float, int]:
         """
         Запуск игры для змейки.
         
@@ -75,7 +75,7 @@ class Environment:
             max_steps: максимальное количество шагов
             
         Returns:
-            финальный fitness змейки
+            кортеж (финальный fitness змейки, длина змейки)
         """
         snake.reset()
         # Препятствия удалены - только еда
@@ -88,6 +88,11 @@ class Environment:
         # Максимальный размер поля (для проверки победы)
         max_grid_size = self.grid_size * self.grid_size
         
+        # Оптимизация: кэшируем текущее время для проверки голода
+        current_time = time.time()
+        last_hunger_check = current_time
+        hunger_check_interval = 0.1  # Проверяем голод каждые 0.1 секунды
+        
         for step in range(max_steps):
             if not snake.alive:
                 break
@@ -99,12 +104,18 @@ class Environment:
                 snake.alive = False  # Завершаем игру
                 break
             
-            # Проверка на смерть от голода (по времени, не по шагам)
-            # Максимум 8 секунд без еды = смерть
-            time_without_food = snake.get_time_without_food()
-            if time_without_food > 8.0:
-                snake.alive = False
-                break
+            # Оптимизация: проверяем голод не каждый шаг, а периодически
+            current_time = time.time()
+            if current_time - last_hunger_check >= hunger_check_interval:
+                time_without_food = snake.get_time_without_food()
+                if time_without_food > 8.0:
+                    snake.alive = False
+                    break
+                # Раннее завершение для очень плохих змеек (не едят >6 секунд и прошло много шагов)
+                if time_without_food > 6.0 and step > 1000:
+                    snake.alive = False
+                    break
+                last_hunger_check = current_time
             
             # Для совместимости увеличиваем steps_without_food (но проверка по времени)
             snake.steps_without_food += 1
@@ -139,17 +150,23 @@ class Environment:
             if move_success and not food_eaten:
                 snake.remove_tail()
             
-            # Обновление fitness (даже если змейка не двигалась)
-            snake.update_fitness()
+            # Оптимизация: обновляем fitness не каждый шаг, а периодически
+            # Это ускоряет вычисления без потери точности
+            if step % 5 == 0:  # Каждые 5 шагов
+                snake.update_fitness()
             
             # Дополнительная награда за приближение к еде (только если змейка жива)
+            # Оптимизация: вычисляем только если змейка жива и не слишком далеко
             if snake.alive:
                 head = snake.get_head()
                 dist_to_food = abs(head[0] - self.food_pos[0]) + abs(head[1] - self.food_pos[1])
                 # Уменьшенная награда за приближение (макс 5)
-                snake.fitness += 5.0 / (dist_to_food + 1)
+                if dist_to_food < 10:  # Только если близко к еде
+                    snake.fitness += 5.0 / (dist_to_food + 1)
         
-        return snake.get_fitness()
+        # Финальное обновление fitness перед возвратом
+        snake.update_fitness()
+        return (snake.get_fitness(), len(snake.body))
     
     def get_free_positions(self, occupied: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
         """

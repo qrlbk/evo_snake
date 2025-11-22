@@ -7,6 +7,7 @@ import numpy as np
 import json
 from datetime import datetime
 from typing import List, Tuple, Optional
+import numpy as np
 
 
 class EvolutionDB:
@@ -123,11 +124,19 @@ class EvolutionDB:
         session_id: int,
         generation: int,
         fitness: float,
-        weights: np.ndarray
+        weights: np.ndarray,
+        hidden_weights: np.ndarray = None
     ):
         """Сохранение лучшей змейки."""
         cursor = self.conn.cursor()
-        weights_bytes = weights.tobytes()
+        # Сохраняем оба слоя весов (если есть скрытый слой)
+        if hidden_weights is not None:
+            # Объединяем веса: сначала первый слой, потом второй
+            combined_weights = np.concatenate([weights.flatten(), hidden_weights.flatten()])
+            weights_bytes = combined_weights.tobytes()
+        else:
+            # Старый формат (один слой) - для совместимости
+            weights_bytes = weights.tobytes()
         cursor.execute('''
             INSERT INTO best_snakes (session_id, generation, fitness, weights)
             VALUES (?, ?, ?, ?)
@@ -179,7 +188,8 @@ class EvolutionDB:
         
         return cursor.fetchall()
     
-    def load_snake_weights(self, weights_bytes: bytes, input_size: int = 8, output_size: int = 4) -> np.ndarray:
+    def load_snake_weights(self, weights_bytes: bytes, input_size: int = 12, output_size: int = 4, 
+                          hidden_size: int = 16, has_hidden: bool = True) -> Tuple[np.ndarray, np.ndarray]:
         """
         Загрузка весов из базы данных.
         
@@ -187,12 +197,32 @@ class EvolutionDB:
             weights_bytes: сериализованные веса
             input_size: размер входа
             output_size: размер выхода
+            hidden_size: размер скрытого слоя
+            has_hidden: есть ли скрытый слой
             
         Returns:
-            массив весов
+            кортеж (weights, hidden_weights) или (weights, None) для старого формата
         """
         weights = np.frombuffer(weights_bytes, dtype=np.float64)
-        return weights.reshape(input_size, output_size)
+        
+        if has_hidden:
+            # Новый формат: два слоя
+            total_size = input_size * hidden_size + hidden_size * output_size
+            if len(weights) == total_size:
+                # Разделяем на два слоя
+                first_layer_size = input_size * hidden_size
+                first_layer = weights[:first_layer_size].reshape(input_size, hidden_size)
+                second_layer = weights[first_layer_size:].reshape(hidden_size, output_size)
+                return (first_layer, second_layer)
+            else:
+                # Старый формат - создаем случайные веса для скрытого слоя
+                first_layer = weights.reshape(input_size, output_size)
+                hidden_layer = np.random.uniform(-0.1, 0.1, (input_size, hidden_size))
+                output_layer = np.random.uniform(-0.1, 0.1, (hidden_size, output_size))
+                return (hidden_layer, output_layer)
+        else:
+            # Старый формат (один слой)
+            return (weights.reshape(input_size, output_size), None)
     
     def get_sessions(self, limit: int = 20) -> List[Tuple]:
         """

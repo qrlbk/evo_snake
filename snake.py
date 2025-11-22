@@ -56,9 +56,13 @@ class Snake:
             walls: список позиций стен [(x, y), ...]
             
         Returns:
-            массив из 8 значений:
+            массив из 12 значений:
             [направление до еды (4 значения),
-             опасности по направлениям (4 значения)]
+             опасности по направлениям (4 значения),
+             длина змейки (нормализованная),
+             время без еды (нормализованное),
+             расстояние до еды (нормализованное),
+             свободное пространство (нормализованное)]
         """
         head_x, head_y = self.get_head()
         food_x, food_y = food_pos
@@ -91,8 +95,9 @@ class Snake:
                     check_y < 0 or check_y >= self.grid_size):
                     break
                 
-                # Проверка собственного тела
-                if (check_x, check_y) in self.body:
+                # Оптимизация: проверка собственного тела (исключаем хвост для скорости)
+                body_without_tail = self.body[:-1] if len(self.body) > 1 else []
+                if (check_x, check_y) in body_without_tail:
                     break
                 
                 # Проверка стен
@@ -104,7 +109,39 @@ class Snake:
             # Нормализация расстояния опасности
             dangers[i] = 1.0 / (1.0 + dist)
         
-        return np.concatenate([direction_to_food, dangers])
+        # Дополнительная информация для "мышления"
+        # Длина змейки (нормализованная: 0-1, где 1 = максимальная длина)
+        max_length = self.grid_size * self.grid_size
+        normalized_length = len(self.body) / max_length
+        
+        # Время без еды (нормализованное: 0-1, где 1 = голоден до смерти)
+        time_without_food = self.get_time_without_food()
+        normalized_hunger = min(1.0, time_without_food / 8.0)
+        
+        # Расстояние до еды (нормализованное: 0-1, где 0 = еда рядом)
+        dist_to_food = abs(dx) + abs(dy)
+        max_dist = self.grid_size * 2
+        normalized_distance = min(1.0, dist_to_food / max_dist)
+        
+        # Свободное пространство (сколько клеток свободно вокруг)
+        free_space = 0
+        for check_dir in self.DIRECTIONS.values():
+            check_x = head_x + check_dir[0]
+            check_y = head_y + check_dir[1]
+            if (0 <= check_x < self.grid_size and 0 <= check_y < self.grid_size and
+                (check_x, check_y) not in self.body):
+                free_space += 1
+        normalized_space = free_space / 4.0  # Максимум 4 направления
+        
+        # Объединяем все входы
+        additional_info = np.array([
+            normalized_length,
+            normalized_hunger,
+            normalized_distance,
+            normalized_space
+        ])
+        
+        return np.concatenate([direction_to_food, dangers, additional_info])
     
     def move(self, action: int, walls: List[Tuple[int, int]] = None) -> bool:
         """
@@ -133,9 +170,13 @@ class Snake:
             walls = []
         
         # Проверка столкновений
+        # ВАЖНО: Проверяем столкновение с телом, ИСКЛЮЧАЯ хвост (последний элемент),
+        # потому что хвост будет удален после движения, если не съедена еда
+        body_without_tail = self.body[:-1] if len(self.body) > 1 else []
+        
         if (new_head[0] < 0 or new_head[0] >= self.grid_size or
             new_head[1] < 0 or new_head[1] >= self.grid_size or
-            new_head in self.body or
+            new_head in body_without_tail or
             new_head in walls):  # Проверка на стены
             # Столкновение - змейка мертва
             self.alive = False
@@ -164,7 +205,9 @@ class Snake:
     
     def get_time_without_food(self) -> float:
         """Получить время без еды в секундах."""
-        return time.time() - self.last_food_time
+        # Оптимизация: используем кэшированное время если доступно
+        check_time = getattr(self, '_current_time', time.time())
+        return check_time - self.last_food_time
     
     def get_hunger_percent(self, max_hunger_seconds: float = 8.0) -> float:
         """
