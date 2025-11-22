@@ -46,24 +46,20 @@ class Evolution:
         self.best_fitness_in_history = 0
         self.current_best_snake = None
         self.current_best_fitness = 0
+        self.current_best_length = 0
+        self.victory_achieved = False
+        self.win_condition_length = grid_size * grid_size  # Победа = заполнить всё поле
     
-    def evaluate_generation(self) -> List[float]:
+    def evaluate_generation(self) -> List[Tuple[float, int]]:
         """
         Оценка всех особей в популяции.
         
         Returns:
-            список fitness для каждой особи
+            список кортежей (fitness, длина змейки) для каждой особи
         """
-        # Адаптивный размер поля: уменьшается с поколением для усложнения
-        # 20 -> 18 -> 16 -> 14 -> 12
-        adaptive_grid = max(12, self.grid_size - (self.generation // 50))
-        if adaptive_grid != self.environment.grid_size:
-            # Меняем размер поля
-            self.environment.grid_size = adaptive_grid
-            for snake in self.population:
-                snake.grid_size = adaptive_grid
-        
+        # Размер поля НЕ изменяется - нужно заполнить всё поле для победы
         fitness_scores = []
+        snake_lengths = []
         
         # Используем max_steps без уменьшения (нужно для заполнения всего поля)
         # Расчет: поле 20x20 = 400 клеток, начальная длина = 3
@@ -73,8 +69,12 @@ class Evolution:
         dynamic_steps = self.max_steps
         
         for snake in self.population:
-            fitness = self.environment.play_game(snake, dynamic_steps)
-            fitness_scores.append(fitness)
+            fitness, snake_length = self.environment.play_game(snake, dynamic_steps)
+            fitness_scores.append((fitness, snake_length))
+            
+            # Проверка победы: если змейка заполнила всё поле
+            if snake_length >= self.win_condition_length:
+                self.victory_achieved = True
         
         return fitness_scores
     
@@ -84,13 +84,23 @@ class Evolution:
         self.environment.generation = self.generation
         
         # Оценка текущей популяции
-        fitness_scores = self.evaluate_generation()
+        results = self.evaluate_generation()
+        
+        # Распаковываем результаты (fitness, длина)
+        fitness_scores = [r[0] for r in results]
+        snake_lengths = [r[1] for r in results]
         
         # Статистика
         best_fitness = max(fitness_scores)
         avg_fitness = np.mean(fitness_scores)
+        best_length = max(snake_lengths)
         self.best_fitness_history.append(best_fitness)
         self.avg_fitness_history.append(avg_fitness)
+        self.current_best_length = best_length
+        
+        # Проверка победы по длине змейки
+        if best_length >= self.win_condition_length:
+            self.victory_achieved = True
         
         # Сортировка по fitness
         sorted_indices = np.argsort(fitness_scores)[::-1]
